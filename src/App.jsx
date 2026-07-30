@@ -12,6 +12,7 @@ import Pharmacy from './pages/Pharmacy.jsx'
 import Reports from './pages/Reports.jsx'
 import Settings from './pages/Settings.jsx'
 import NotFound from './pages/NotFound.jsx'
+<<<<<<< HEAD
 import { getToken } from './api/client.js'
 import { ClinicProfileProvider } from './context/ClinicProfileContext.jsx'
 
@@ -42,5 +43,29 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </ClinicProfileProvider>
+=======
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<Login />} />
+
+      <Route element={<Layout />}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/patients" element={<Patients />} />
+        <Route path="/patients/register" element={<RegisterPatient />} />
+        <Route path="/patients/:id" element={<PatientDetails />} />
+        <Route path="/billing" element={<Billing />} />
+        <Route path="/payments" element={<Payments />} />
+        <Route path="/inventory" element={<Inventory />} />
+        <Route path="/pharmacy" element={<Pharmacy />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/settings" element={<Settings />} />
+      </Route>
+
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   )
 }

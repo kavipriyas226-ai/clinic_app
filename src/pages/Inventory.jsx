@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { useEffect, useMemo, useState } from 'react'
 import { PackagePlus, Stethoscope, Filter, AlertTriangle, Eye, Pencil, Check } from 'lucide-react'
+=======
+import { useMemo, useState } from 'react'
+import { PackagePlus, Filter, AlertTriangle } from 'lucide-react'
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import SearchInput from '../components/common/SearchInput.jsx'
@@ -8,6 +13,7 @@ import Badge from '../components/common/Badge.jsx'
 import Button from '../components/common/Button.jsx'
 import Modal from '../components/common/Modal.jsx'
 import { FormField, TextInput, Select } from '../components/common/FormField.jsx'
+<<<<<<< HEAD
 import { getInventory, createInventoryItem, updateInventoryItem } from '../api/inventory.js'
 import { getTreatmentOptions, createTreatmentOption, updateTreatmentOption } from '../api/treatments.js'
 
@@ -42,11 +48,23 @@ export default function Inventory() {
   }, [])
 
   const categories = ['All', ...new Set(inventory.map((i) => i.category))]
+=======
+import { inventory as mockInventory } from '../data/mockData.js'
+
+export default function Inventory() {
+  const [inventory, setInventory] = useState(mockInventory)
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('All')
+  const [showAdd, setShowAdd] = useState(false)
+
+  const categories = ['All', ...new Set(mockInventory.map((i) => i.category))]
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 
   const filtered = useMemo(() => {
     return inventory.filter((i) => {
       const matchesQuery = i.name.toLowerCase().includes(query.toLowerCase()) || i.id.toLowerCase().includes(query.toLowerCase())
       const matchesCategory = category === 'All' || i.category === category
+<<<<<<< HEAD
       const low = i.stock <= i.threshold
       const matchesStockStatus =
         stockStatus === 'All' || (stockStatus === 'Low Stock' ? low : !low)
@@ -61,12 +79,18 @@ export default function Inventory() {
       return matchesQuery && matchesCategory
     })
   }, [treatments, treatmentQuery, treatmentCategory])
+=======
+      return matchesQuery && matchesCategory
+    })
+  }, [inventory, query, category])
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 
   function isExpiringSoon(expiry) {
     const diff = (new Date(expiry) - new Date('2026-07-28')) / (1000 * 60 * 60 * 24)
     return diff <= 60
   }
 
+<<<<<<< HEAD
   async function handleAdd(e) {
     e.preventDefault()
     const form = new FormData(e.target)
@@ -74,11 +98,21 @@ export default function Inventory() {
       name: form.get('name'),
       category: form.get('category'),
       price: Number(form.get('price')),
+=======
+  function handleAdd(e) {
+    e.preventDefault()
+    const form = new FormData(e.target)
+    const newItem = {
+      id: `MED-${Math.floor(Math.random() * 900 + 100)}`,
+      name: form.get('name'),
+      category: form.get('category'),
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
       stock: Number(form.get('stock')),
       threshold: Number(form.get('threshold')),
       expiry: form.get('expiry'),
       supplier: form.get('supplier'),
     }
+<<<<<<< HEAD
     const created = await createInventoryItem(payload)
     setInventory((prev) => [created, ...prev])
     setShowAdd(false)
@@ -129,11 +163,18 @@ export default function Inventory() {
     setTreatmentEditTarget(null)
   }
 
+=======
+    setInventory((prev) => [newItem, ...prev])
+    setShowAdd(false)
+  }
+
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   return (
     <div>
       <PageHeader
         title="Inventory"
         subtitle={`${filtered.length} item${filtered.length !== 1 ? 's' : ''} in stock`}
+<<<<<<< HEAD
         actions={
           <>
             <Button icon={PackagePlus} onClick={() => setShowAdd(true)}>Add Medicine</Button>
@@ -152,6 +193,12 @@ export default function Inventory() {
       )}
 
       <Card className="mb-6">
+=======
+        actions={<Button icon={PackagePlus} onClick={() => setShowAdd(true)}>Add Medicine</Button>}
+      />
+
+      <Card>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <SearchInput value={query} onChange={setQuery} placeholder="Search medicines..." className="flex-1" />
           <div className="flex items-center gap-2">
@@ -159,6 +206,7 @@ export default function Inventory() {
             <Select value={category} onChange={(e) => setCategory(e.target.value)} className="w-44">
               {categories.map((c) => <option key={c}>{c}</option>)}
             </Select>
+<<<<<<< HEAD
             <Select value={stockStatus} onChange={(e) => setStockStatus(e.target.value)} className="w-40">
               <option value="All">All</option>
               <option value="In Stock">In Stock</option>
@@ -173,6 +221,14 @@ export default function Inventory() {
           )}
           {!loading && filtered.length === 0 && (
             <tr><td colSpan={8} className="py-10 text-center text-sm text-gray-400">No medicines found.</td></tr>
+=======
+          </div>
+        </div>
+
+        <Table columns={['Medicine', 'Category', 'Stock', 'Expiry', 'Supplier', 'Status']}>
+          {filtered.length === 0 && (
+            <tr><td colSpan={6} className="py-10 text-center text-sm text-gray-400">No medicines found.</td></tr>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
           )}
           {filtered.map((item) => {
             const low = item.stock <= item.threshold
@@ -184,7 +240,10 @@ export default function Inventory() {
                   <p className="text-xs text-gray-400">{item.id}</p>
                 </td>
                 <td className="py-3 px-3 text-gray-600">{item.category}</td>
+<<<<<<< HEAD
                 <td className="py-3 px-3 text-gray-600">₹{item.price.toLocaleString('en-IN')}</td>
+=======
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                 <td className="py-3 px-3 text-gray-600">{item.stock} units</td>
                 <td className="py-3 px-3 text-gray-600">
                   <span className="flex items-center gap-1.5">
@@ -196,6 +255,7 @@ export default function Inventory() {
                 <td className="py-3 px-3">
                   {low ? <Badge color="red">Low Stock</Badge> : <Badge color="green">In Stock</Badge>}
                 </td>
+<<<<<<< HEAD
                 <td className="py-3 px-3">
                   <div className="flex items-center gap-1">
                     <button
@@ -214,12 +274,15 @@ export default function Inventory() {
                     </button>
                   </div>
                 </td>
+=======
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
               </tr>
             )
           })}
         </Table>
       </Card>
 
+<<<<<<< HEAD
       <Card>
         <h3 className="font-bold text-gray-800 mb-4">Treatments</h3>
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -271,6 +334,8 @@ export default function Inventory() {
         </Table>
       </Card>
 
+=======
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
       <Modal
         open={showAdd}
         onClose={() => setShowAdd(false)}
@@ -290,9 +355,12 @@ export default function Inventory() {
                 <option>Supplement</option>
               </Select>
             </FormField>
+<<<<<<< HEAD
             <FormField label="Price (₹)" required>
               <TextInput name="price" type="number" min="0" required placeholder="0" />
             </FormField>
+=======
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
             <FormField label="Stock Quantity" required>
               <TextInput name="stock" type="number" min="0" required placeholder="0" />
             </FormField>
@@ -304,7 +372,11 @@ export default function Inventory() {
             </FormField>
           </div>
           <FormField label="Supplier" required>
+<<<<<<< HEAD
             <TextInput name="supplier" required placeholder="e.g. One Clinical Skincare Distributors" />
+=======
+            <TextInput name="supplier" required placeholder="e.g. Zenith Pharma Distributors" />
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
           </FormField>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
@@ -312,6 +384,7 @@ export default function Inventory() {
           </div>
         </form>
       </Modal>
+<<<<<<< HEAD
 
       <Modal
         open={showAddTreatment}
@@ -452,6 +525,8 @@ function DetailRow({ label, value }) {
     <div className="flex items-center justify-between gap-3 py-1.5 border-b border-gray-50 last:border-0">
       <span className="text-gray-400">{label}</span>
       <span className="font-medium text-gray-800 text-right">{value}</span>
+=======
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
     </div>
   )
 }

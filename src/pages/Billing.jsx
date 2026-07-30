@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Plus, Minus, Trash2, Printer, Receipt, AlertCircle } from 'lucide-react'
@@ -104,6 +105,33 @@ export default function Billing() {
     setLineItems((prev) => [
       ...prev,
       { uid: crypto.randomUUID(), id: first.id, type: kind, name: first.name, price: first.price, qty: 1, amount: first.price },
+=======
+import { useMemo, useState } from 'react'
+import { Plus, Minus, Trash2, Printer, Receipt } from 'lucide-react'
+import Card from '../components/common/Card.jsx'
+import PageHeader from '../components/common/PageHeader.jsx'
+import Button from '../components/common/Button.jsx'
+import { FormField, Select, TextInput } from '../components/common/FormField.jsx'
+import { patients, treatmentOptions, medicineOptions, clinicProfile } from '../data/mockData.js'
+
+const GST_RATE = 0.18
+
+export default function Billing() {
+  const [patientId, setPatientId] = useState(patients[0].id)
+  const [lineItems, setLineItems] = useState([
+    { id: treatmentOptions[0].id, type: 'Treatment', name: treatmentOptions[0].name, price: treatmentOptions[0].price, qty: 1 },
+  ])
+  const [discount, setDiscount] = useState(0)
+
+  const selectedPatient = patients.find((p) => p.id === patientId)
+
+  function addItem(kind) {
+    const options = kind === 'Treatment' ? treatmentOptions : medicineOptions
+    const first = options[0]
+    setLineItems((prev) => [
+      ...prev,
+      { uid: crypto.randomUUID(), id: first.id, type: kind, name: first.name, price: first.price, qty: 1 },
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
     ])
   }
 
@@ -111,14 +139,18 @@ export default function Billing() {
     setLineItems((prev) => prev.map((item, i) => (i === idx ? { ...item, ...patch } : item)))
   }
 
+<<<<<<< HEAD
   function updateQty(idx, qty) {
     setLineItems((prev) => prev.map((item, i) => (i === idx ? { ...item, qty, amount: item.price * qty } : item)))
   }
 
+=======
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   function removeItem(idx) {
     setLineItems((prev) => prev.filter((_, i) => i !== idx))
   }
 
+<<<<<<< HEAD
   function openItemSearch(idx) {
     setItemSearch({ idx, query: '' })
   }
@@ -181,18 +213,41 @@ export default function Billing() {
     )
   }
 
+=======
+  function handleItemSelect(idx, kind, itemId) {
+    const options = kind === 'Treatment' ? treatmentOptions : medicineOptions
+    const found = options.find((o) => o.id === itemId)
+    updateItem(idx, { id: found.id, name: found.name, price: found.price })
+  }
+
+  const subtotal = useMemo(
+    () => lineItems.reduce((sum, item) => sum + item.price * item.qty, 0),
+    [lineItems]
+  )
+  const discountAmount = (subtotal * discount) / 100
+  const taxable = subtotal - discountAmount
+  const gstAmount = taxable * GST_RATE
+  const total = taxable + gstAmount
+
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   return (
     <div>
       <PageHeader
         title="Billing"
         subtitle="Create an invoice for treatments and medicines"
         actions={
+<<<<<<< HEAD
           <Button icon={Printer} onClick={handlePrintInvoice} disabled={printing}>
             {printing ? 'Saving…' : 'Print Invoice'}
+=======
+          <Button icon={Printer} onClick={() => window.print()}>
+            Print Invoice
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
           </Button>
         }
       />
 
+<<<<<<< HEAD
       {error && (
         <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 mb-4 print:hidden">
           <AlertCircle size={15} className="shrink-0" />
@@ -200,10 +255,13 @@ export default function Billing() {
         </div>
       )}
 
+=======
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
       <div className="grid lg:grid-cols-3 gap-6 print:block">
         <div className="lg:col-span-2 space-y-6 print:hidden">
           <Card>
             <h3 className="font-bold text-gray-800 mb-4">Patient</h3>
+<<<<<<< HEAD
             <SearchInput
               value={patientQuery}
               onChange={setPatientQuery}
@@ -214,6 +272,11 @@ export default function Billing() {
               <Select value={patientId} onChange={(e) => setPatientId(e.target.value)}>
                 {filteredPatients.length === 0 && <option value="">No patients found</option>}
                 {filteredPatients.map((p) => (
+=======
+            <FormField label="Select Patient">
+              <Select value={patientId} onChange={(e) => setPatientId(e.target.value)}>
+                {patients.map((p) => (
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                   <option key={p.id} value={p.id}>{p.name} — {p.id}</option>
                 ))}
               </Select>
@@ -241,6 +304,7 @@ export default function Billing() {
                     <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-primary-50 text-primary-700 w-fit shrink-0">
                       {item.type}
                     </span>
+<<<<<<< HEAD
                     <div className="relative flex-1 min-w-0">
                       {itemSearch.idx === idx ? (
                         <>
@@ -286,18 +350,37 @@ export default function Billing() {
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => updateQty(idx, Math.max(1, item.qty - 1))}
+=======
+                    <select
+                      value={item.id}
+                      onChange={(e) => handleItemSelect(idx, item.type, e.target.value)}
+                      className="flex-1 text-sm px-3 py-2 rounded-xl border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none"
+                    >
+                      {options.map((o) => (
+                        <option key={o.id} value={o.id}>{o.name}</option>
+                      ))}
+                    </select>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => updateItem(idx, { qty: Math.max(1, item.qty - 1) })}
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                         className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-primary-50"
                       >
                         <Minus size={13} />
                       </button>
                       <span className="w-8 text-center text-sm font-semibold">{item.qty}</span>
                       <button
+<<<<<<< HEAD
                         onClick={() => updateQty(idx, item.qty + 1)}
+=======
+                        onClick={() => updateItem(idx, { qty: item.qty + 1 })}
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                         className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-primary-50"
                       >
                         <Plus size={13} />
                       </button>
                     </div>
+<<<<<<< HEAD
                     <div className="relative w-28 shrink-0">
                       <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
                       <input
@@ -308,6 +391,11 @@ export default function Billing() {
                         className="w-full pl-5 pr-2 py-1.5 text-sm font-semibold text-gray-700 text-right rounded-lg border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition"
                       />
                     </div>
+=======
+                    <span className="text-sm font-semibold text-gray-700 w-24 text-right shrink-0">
+                      ₹{(item.price * item.qty).toLocaleString('en-IN')}
+                    </span>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                     <button
                       onClick={() => removeItem(idx)}
                       className="p-1.5 rounded-lg text-gray-400 hover:bg-rose-100 hover:text-rose-600 shrink-0"
@@ -324,6 +412,7 @@ export default function Billing() {
           </Card>
 
           <Card>
+<<<<<<< HEAD
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-800">Discount</h3>
               <button
@@ -346,10 +435,15 @@ export default function Billing() {
               label="Discount (%)"
               hint={discountEnabled ? 'Applied to subtotal before GST' : 'Enable the toggle above to apply a discount'}
             >
+=======
+            <h3 className="font-bold text-gray-800 mb-4">Discount</h3>
+            <FormField label="Discount (%)" hint="Applied to subtotal before GST">
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
               <TextInput
                 type="number"
                 min="0"
                 max="100"
+<<<<<<< HEAD
                 disabled={!discountEnabled}
                 value={discount}
                 onChange={(e) => setDiscount(Number(e.target.value) || 0)}
@@ -387,6 +481,23 @@ export default function Billing() {
 
         {/* Invoice summary — on-screen builder preview only, not printed */}
         <Card className="h-fit print:hidden">
+=======
+                value={discount}
+                onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+              />
+            </FormField>
+          </Card>
+        </div>
+
+        {/* Invoice summary / printable */}
+        <Card className="h-fit print:shadow-none print:border-0">
+          <div className="hidden print:block mb-4">
+            <h2 className="font-bold text-lg">{clinicProfile.name}</h2>
+            <p className="text-xs text-gray-500">{clinicProfile.address}</p>
+            <p className="text-xs text-gray-500">GSTIN: {clinicProfile.gstin}</p>
+          </div>
+
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
           <div className="flex items-center gap-2 mb-4">
             <Receipt size={18} className="text-primary-500" />
             <h3 className="font-bold text-gray-800">Invoice Summary</h3>
@@ -402,7 +513,11 @@ export default function Billing() {
             {lineItems.map((item, idx) => (
               <div key={idx} className="flex justify-between text-gray-600">
                 <span className="truncate pr-2">{item.name} x{item.qty}</span>
+<<<<<<< HEAD
                 <span className="shrink-0">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</span>
+=======
+                <span className="shrink-0">₹{(item.price * item.qty).toLocaleString('en-IN')}</span>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
               </div>
             ))}
           </div>
@@ -417,7 +532,11 @@ export default function Billing() {
               <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="flex justify-between text-gray-600">
+<<<<<<< HEAD
               <span>GST {gstEnabled ? '(18%)' : '(disabled)'}</span>
+=======
+              <span>GST (18%)</span>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
               <span>+ ₹{gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-gray-100">
@@ -426,6 +545,7 @@ export default function Billing() {
             </div>
           </div>
 
+<<<<<<< HEAD
           {patientPrescription && (
             <div className="mt-5 pt-4 border-t border-gray-100">
               <h4 className="font-bold text-gray-800 text-sm mb-2">Prescription {patientPrescription.id}</h4>
@@ -578,6 +698,12 @@ export default function Billing() {
             Thank you for visiting {clinicProfile?.name}. Wishing you good health.
           </div>
         </div>
+=======
+          <Button className="w-full mt-5 print:hidden" icon={Printer} onClick={() => window.print()}>
+            Print Invoice
+          </Button>
+        </Card>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
       </div>
     </div>
   )

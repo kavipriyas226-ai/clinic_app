@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+=======
+import { useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 import { Eye, Pencil, Trash2, UserPlus, Filter } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
@@ -10,20 +15,30 @@ import Badge from '../components/common/Badge.jsx'
 import Button from '../components/common/Button.jsx'
 import Modal from '../components/common/Modal.jsx'
 import { Select } from '../components/common/FormField.jsx'
+<<<<<<< HEAD
 import { getPatients, deletePatient } from '../api/patients.js'
+=======
+import { patients as mockPatients } from '../data/mockData.js'
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 
 const PAGE_SIZE = 6
 
 export default function Patients() {
   const navigate = useNavigate()
+<<<<<<< HEAD
   const [searchParams] = useSearchParams()
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState(searchParams.get('search') || '')
+=======
+  const [patients, setPatients] = useState(mockPatients)
+  const [query, setQuery] = useState('')
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   const [statusFilter, setStatusFilter] = useState('All')
   const [page, setPage] = useState(1)
   const [deleteTarget, setDeleteTarget] = useState(null)
 
+<<<<<<< HEAD
   useEffect(() => {
     getPatients()
       .then(setPatients)
@@ -38,6 +53,8 @@ export default function Patients() {
     setPage(1)
   }, [searchParams])
 
+=======
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   const filtered = useMemo(() => {
     return patients.filter((p) => {
       const matchesQuery =
@@ -62,8 +79,12 @@ export default function Patients() {
     setPage(1)
   }
 
+<<<<<<< HEAD
   async function confirmDelete() {
     await deletePatient(deleteTarget.id)
+=======
+  function confirmDelete() {
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
     setPatients((prev) => prev.filter((p) => p.id !== deleteTarget.id))
     setDeleteTarget(null)
   }
@@ -93,12 +114,18 @@ export default function Patients() {
             <Select value={statusFilter} onChange={(e) => handleFilterChange(e.target.value)} className="w-40">
               <option>All</option>
               <option>New</option>
+<<<<<<< HEAD
+=======
+              <option>Active</option>
+              <option>Follow-up</option>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
               <option>Inactive</option>
             </Select>
           </div>
         </div>
 
         <Table columns={['Patient', 'Age/Gender', 'Contact', 'Concern', 'Last Visit', 'Status', 'Actions']}>
+<<<<<<< HEAD
           {loading && (
             <tr>
               <td colSpan={7} className="py-10 text-center text-sm text-gray-400">
@@ -107,6 +134,9 @@ export default function Patients() {
             </tr>
           )}
           {!loading && pageItems.length === 0 && (
+=======
+          {pageItems.length === 0 && (
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
             <tr>
               <td colSpan={7} className="py-10 text-center text-sm text-gray-400">
                 No patients match your search.

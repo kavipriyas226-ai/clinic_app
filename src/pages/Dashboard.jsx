@@ -1,8 +1,15 @@
+<<<<<<< HEAD
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Users,
   UserCheck,
+=======
+import { Link } from 'react-router-dom'
+import {
+  Users,
+  CalendarCheck,
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   IndianRupee,
   PackageX,
   UserPlus,
@@ -15,10 +22,21 @@ import Card from '../components/common/Card.jsx'
 import StatCard from '../components/common/StatCard.jsx'
 import Badge from '../components/common/Badge.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
+<<<<<<< HEAD
 import { getDashboardStats } from '../api/dashboard.js'
 import { getPatients } from '../api/patients.js'
 import { getInventory } from '../api/inventory.js'
 import { getRevenueReport } from '../api/reports.js'
+=======
+import {
+  dashboardStats,
+  revenueChart,
+  recentPatients,
+  lowStockMedicines,
+} from '../data/mockData.js'
+
+const statIcons = [Users, CalendarCheck, IndianRupee, PackageX]
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 
 const quickActions = [
   { label: 'Register Patient', to: '/patients/register', icon: UserPlus },
@@ -28,6 +46,7 @@ const quickActions = [
 ]
 
 export default function Dashboard() {
+<<<<<<< HEAD
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState(null)
   const [recentPatients, setRecentPatients] = useState([])
@@ -66,6 +85,9 @@ export default function Dashboard() {
   ]
   const statIcons = [Users, UserCheck, IndianRupee, PackageX]
   const maxRevenue = Math.max(1, ...revenueChart.map((d) => d.value))
+=======
+  const maxRevenue = Math.max(...revenueChart.map((d) => d.value))
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 
   return (
     <div>

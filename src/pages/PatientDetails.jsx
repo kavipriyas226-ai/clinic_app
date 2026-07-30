@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useEffect, useState } from 'react'
+=======
+import { useState } from 'react'
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -17,7 +21,11 @@ import Card from '../components/common/Card.jsx'
 import Badge from '../components/common/Badge.jsx'
 import Button from '../components/common/Button.jsx'
 import { FormField, TextInput, TextArea } from '../components/common/FormField.jsx'
+<<<<<<< HEAD
 import { getPatient, updatePatient } from '../api/patients.js'
+=======
+import { patients, patientDetailExtra } from '../data/mockData.js'
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 
 const tabs = [
   { key: 'history', label: 'Treatment History', icon: ClipboardList },
@@ -31,6 +39,7 @@ export default function PatientDetails() {
   const navigate = useNavigate()
   const [editMode, setEditMode] = useState(searchParams.get('edit') === '1')
   const [activeTab, setActiveTab] = useState('history')
+<<<<<<< HEAD
   const [patient, setPatient] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -81,6 +90,17 @@ export default function PatientDetails() {
   }
 
   if (notFound || !patient) {
+=======
+
+  const patient = patients.find((p) => p.id === id)
+  const extra = patientDetailExtra[id] || {
+    dob: '—', email: '—', address: '—', bloodGroup: '—', allergies: '—',
+    medicalNotes: 'No additional notes recorded.',
+    treatments: [], prescriptions: [], invoices: [],
+  }
+
+  if (!patient) {
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
     return (
       <Card className="text-center py-12">
         <p className="text-gray-500">Patient not found.</p>
@@ -91,10 +111,13 @@ export default function PatientDetails() {
     )
   }
 
+<<<<<<< HEAD
   const treatments = patient.treatments || []
   const prescriptions = patient.prescriptions || []
   const invoices = patient.invoices || []
 
+=======
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   return (
     <div>
       <button
@@ -121,10 +144,16 @@ export default function PatientDetails() {
               variant={editMode ? 'secondary' : 'outline'}
               size="sm"
               icon={editMode ? Save : Pencil}
+<<<<<<< HEAD
               onClick={handleEditToggle}
               disabled={saving}
             >
               {saving ? 'Saving…' : editMode ? 'Save' : 'Edit'}
+=======
+              onClick={() => setEditMode((v) => !v)}
+            >
+              {editMode ? 'Save' : 'Edit'}
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
             </Button>
           </div>
 
@@ -134,6 +163,7 @@ export default function PatientDetails() {
 
           {editMode ? (
             <div className="space-y-3">
+<<<<<<< HEAD
               <FormField label="Phone">
                 <TextInput value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} />
               </FormField>
@@ -149,14 +179,28 @@ export default function PatientDetails() {
               <FormField label="Medical Notes">
                 <TextArea value={form.medicalNotes} onChange={(e) => updateForm('medicalNotes', e.target.value)} />
               </FormField>
+=======
+              <FormField label="Phone"><TextInput defaultValue={patient.phone} /></FormField>
+              <FormField label="Email"><TextInput defaultValue={extra.email} /></FormField>
+              <FormField label="Address"><TextArea defaultValue={extra.address} /></FormField>
+              <FormField label="Allergies"><TextInput defaultValue={extra.allergies} /></FormField>
+              <FormField label="Medical Notes"><TextArea defaultValue={extra.medicalNotes} /></FormField>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
             </div>
           ) : (
             <div className="space-y-3 text-sm">
               <InfoRow icon={Phone} label="Phone" value={patient.phone} />
+<<<<<<< HEAD
               <InfoRow icon={Mail} label="Email" value={patient.email || '—'} />
               <InfoRow icon={MapPin} label="Address" value={patient.address || '—'} />
               <InfoRow icon={Droplet} label="Blood Group" value={patient.bloodGroup || '—'} />
               <InfoRow icon={AlertTriangle} label="Allergies" value={patient.allergies || '—'} />
+=======
+              <InfoRow icon={Mail} label="Email" value={extra.email} />
+              <InfoRow icon={MapPin} label="Address" value={extra.address} />
+              <InfoRow icon={Droplet} label="Blood Group" value={extra.bloodGroup} />
+              <InfoRow icon={AlertTriangle} label="Allergies" value={extra.allergies} />
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 
               <div className="pt-3 border-t border-gray-100">
                 <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Basic Info</p>
@@ -164,7 +208,11 @@ export default function PatientDetails() {
                   <span>Age / Gender</span>
                   <span className="font-medium text-gray-800">{patient.age} / {patient.gender}</span>
                   <span>DOB</span>
+<<<<<<< HEAD
                   <span className="font-medium text-gray-800">{patient.dob || '—'}</span>
+=======
+                  <span className="font-medium text-gray-800">{extra.dob}</span>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                   <span>Concern</span>
                   <span className="font-medium text-gray-800">{patient.concern}</span>
                   <span>Doctor</span>
@@ -174,7 +222,11 @@ export default function PatientDetails() {
 
               <div className="pt-3 border-t border-gray-100">
                 <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Medical Notes</p>
+<<<<<<< HEAD
                 <p className="text-gray-600 leading-relaxed">{patient.medicalNotes || 'No additional notes recorded.'}</p>
+=======
+                <p className="text-gray-600 leading-relaxed">{extra.medicalNotes}</p>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
               </div>
             </div>
           )}
@@ -200,8 +252,13 @@ export default function PatientDetails() {
 
           {activeTab === 'history' && (
             <div className="space-y-4">
+<<<<<<< HEAD
               {treatments.length === 0 && <EmptyState text="No treatment history recorded." />}
               {treatments.map((t, i) => (
+=======
+              {extra.treatments.length === 0 && <EmptyState text="No treatment history recorded." />}
+              {extra.treatments.map((t, i) => (
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                 <div key={i} className="flex gap-4 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
                   <div className="w-2 h-2 rounded-full bg-primary-500 mt-2 shrink-0" />
                   <div>
@@ -216,8 +273,13 @@ export default function PatientDetails() {
 
           {activeTab === 'prescriptions' && (
             <div className="space-y-3">
+<<<<<<< HEAD
               {prescriptions.length === 0 && <EmptyState text="No prescriptions recorded." />}
               {prescriptions.map((p, i) => (
+=======
+              {extra.prescriptions.length === 0 && <EmptyState text="No prescriptions recorded." />}
+              {extra.prescriptions.map((p, i) => (
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                 <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-primary-50/50">
                   <div>
                     <p className="text-sm font-semibold text-gray-800">{p.medicine}</p>
@@ -231,8 +293,13 @@ export default function PatientDetails() {
 
           {activeTab === 'invoices' && (
             <div className="space-y-2">
+<<<<<<< HEAD
               {invoices.length === 0 && <EmptyState text="No invoices recorded." />}
               {invoices.map((inv) => (
+=======
+              {extra.invoices.length === 0 && <EmptyState text="No invoices recorded." />}
+              {extra.invoices.map((inv) => (
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                 <div key={inv.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100">
                   <div>
                     <p className="text-sm font-semibold text-gray-800">{inv.id}</p>

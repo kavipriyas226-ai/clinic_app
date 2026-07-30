@@ -1,9 +1,14 @@
+<<<<<<< HEAD
 import { useEffect, useState } from 'react'
+=======
+import { useState } from 'react'
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 import { Download, TrendingUp, Users, Pill } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import Button from '../components/common/Button.jsx'
 import { Select } from '../components/common/FormField.jsx'
+<<<<<<< HEAD
 import { getRevenueReport, getPatientGrowthReport, getMedicineSalesReport } from '../api/reports.js'
 
 function toCsvRow(cells) {
@@ -66,6 +71,19 @@ export default function Reports() {
   const maxRevenue = Math.max(1, ...reportRevenueByMonth.map((d) => d.value))
   const maxPatients = Math.max(1, ...reportPatientGrowth.map((d) => d.new + d.returning))
   const maxSales = Math.max(1, ...reportMedicineSales.map((d) => d.revenue))
+=======
+import {
+  reportRevenueByMonth,
+  reportPatientGrowth,
+  reportMedicineSales,
+} from '../data/mockData.js'
+
+export default function Reports() {
+  const [range, setRange] = useState('6m')
+  const maxRevenue = Math.max(...reportRevenueByMonth.map((d) => d.value))
+  const maxPatients = Math.max(...reportPatientGrowth.map((d) => d.new + d.returning))
+  const maxSales = Math.max(...reportMedicineSales.map((d) => d.revenue))
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 
   return (
     <div>
@@ -79,6 +97,7 @@ export default function Reports() {
               <option value="12m">Last 12 months</option>
               <option value="ytd">Year to date</option>
             </Select>
+<<<<<<< HEAD
             <Button
               icon={Download}
               variant="outline"
@@ -86,6 +105,9 @@ export default function Reports() {
             >
               Export
             </Button>
+=======
+            <Button icon={Download} variant="outline">Export</Button>
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
           </>
         }
       />
@@ -144,9 +166,12 @@ export default function Reports() {
           </div>
           <p className="text-xs text-gray-400 mb-6">Top-selling medicines by revenue</p>
           <div className="space-y-3">
+<<<<<<< HEAD
             {reportMedicineSales.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-8">No medicine sales recorded yet.</p>
             )}
+=======
+>>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
             {reportMedicineSales.map((m) => (
               <div key={m.name}>
                 <div className="flex justify-between text-sm mb-1">
