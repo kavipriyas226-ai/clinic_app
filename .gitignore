@@ -1,12 +1,5 @@
-<<<<<<< HEAD
-frontend/node_modules
-frontend/dist
-backend/target
-backend/.env
-backend/src/main/resources/application-local.yml
-=======
 node_modules
 dist
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
+.env.local
 .DS_Store
 *.log

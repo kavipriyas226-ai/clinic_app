@@ -1,19 +1,12 @@
-<<<<<<< HEAD
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Trash2, ShoppingCart, Pill, AlertCircle } from 'lucide-react'
-=======
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Trash2, ShoppingCart, Pill } from 'lucide-react'
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import SearchInput from '../components/common/SearchInput.jsx'
 import Button from '../components/common/Button.jsx'
 import Badge from '../components/common/Badge.jsx'
 import { FormField, Select, TextInput } from '../components/common/FormField.jsx'
-<<<<<<< HEAD
 import { getInventory } from '../api/inventory.js'
 import { getPatients } from '../api/patients.js'
 import { createPrescription } from '../api/prescriptions.js'
@@ -49,30 +42,12 @@ export default function Pharmacy() {
   const filteredPatients = useMemo(
     () => patients.filter((p) => p.name.toLowerCase().includes(patientQuery.toLowerCase())),
     [patients, patientQuery]
-=======
-import { inventory, patients } from '../data/mockData.js'
-
-export default function Pharmacy() {
-  const navigate = useNavigate()
-  const [query, setQuery] = useState('')
-  const [patientId, setPatientId] = useState(patients[0].id)
-  const [prescription, setPrescription] = useState([])
-  const [bill, setBill] = useState([])
-
-  const filtered = useMemo(
-    () => inventory.filter((m) => m.name.toLowerCase().includes(query.toLowerCase())),
-    [query]
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   )
 
   function addToPrescription(med) {
     setPrescription((prev) => [
       ...prev,
-<<<<<<< HEAD
       { uid: crypto.randomUUID(), medicineId: med.id, name: med.name, dosage: '1 dose', frequency: 'Once daily', duration: '7 days' },
-=======
-      { uid: crypto.randomUUID(), name: med.name, dosage: '1 dose', frequency: 'Once daily', duration: '7 days' },
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
     ])
   }
 
@@ -98,7 +73,6 @@ export default function Pharmacy() {
     setBill((prev) => prev.filter((b) => b.id !== id))
   }
 
-<<<<<<< HEAD
   async function addPrescriptionToBill() {
     setError('')
     setSaving(true)
@@ -124,13 +98,10 @@ export default function Pharmacy() {
     }
   }
 
-=======
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   return (
     <div>
       <PageHeader title="Pharmacy" subtitle="Search medicines, build prescriptions, and add items to billing" />
 
-<<<<<<< HEAD
       {error && (
         <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 mb-4">
           <AlertCircle size={15} className="shrink-0" />
@@ -138,20 +109,14 @@ export default function Pharmacy() {
         </div>
       )}
 
-=======
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
       <div className="grid xl:grid-cols-3 gap-6">
         {/* Medicine search */}
         <Card className="xl:col-span-1">
           <h3 className="font-bold text-gray-800 mb-4">Medicine Search</h3>
           <SearchInput value={query} onChange={setQuery} placeholder="Search medicines..." className="mb-4" />
           <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
-<<<<<<< HEAD
             {loading && <p className="text-sm text-gray-400 text-center py-8">Loading medicines…</p>}
             {!loading && filtered.map((med) => (
-=======
-            {filtered.map((med) => (
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
               <div key={med.id} className="p-3 rounded-xl border border-gray-100 hover:border-primary-200 transition">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
@@ -164,27 +129,16 @@ export default function Pharmacy() {
                   <Button size="sm" variant="secondary" icon={Pill} onClick={() => addToPrescription(med)} className="flex-1">
                     Prescribe
                   </Button>
-<<<<<<< HEAD
                 </div>
               </div>
             ))}
             {!loading && filtered.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No medicines found.</p>}
-=======
-                  <Button size="sm" variant="outline" icon={ShoppingCart} onClick={() => addToBill(med)} className="flex-1">
-                    Add to Bill
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {filtered.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No medicines found.</p>}
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
           </div>
         </Card>
 
         {/* Prescription builder */}
         <Card className="xl:col-span-1">
           <h3 className="font-bold text-gray-800 mb-4">Prescription</h3>
-<<<<<<< HEAD
           <SearchInput
             value={patientQuery}
             onChange={setPatientQuery}
@@ -195,11 +149,6 @@ export default function Pharmacy() {
             <Select value={patientId} onChange={(e) => setPatientId(e.target.value)}>
               {filteredPatients.length === 0 && <option value="">No patients found</option>}
               {filteredPatients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-=======
-          <FormField label="Patient" className="mb-4">
-            <Select value={patientId} onChange={(e) => setPatientId(e.target.value)}>
-              {patients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
             </Select>
           </FormField>
 
@@ -239,13 +188,9 @@ export default function Pharmacy() {
           </div>
 
           {prescription.length > 0 && (
-<<<<<<< HEAD
             <Button className="w-full mt-4" variant="secondary" icon={ShoppingCart} onClick={addPrescriptionToBill} disabled={saving}>
               {saving ? 'Saving…' : 'Add to Bill'}
             </Button>
-=======
-            <Button className="w-full mt-4" variant="secondary">Save Prescription</Button>
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
           )}
         </Card>
 
@@ -271,14 +216,10 @@ export default function Pharmacy() {
             ))}
           </div>
           {bill.length > 0 && (
-<<<<<<< HEAD
             <Button
               className="w-full mt-4"
               onClick={() => navigate('/billing', { state: { billItems: bill, patientId } })}
             >
-=======
-            <Button className="w-full mt-4" onClick={() => navigate('/billing')}>
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
               Proceed to Billing
             </Button>
           )}

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Link } from 'react-router-dom'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import Card from './Card.jsx'
@@ -11,15 +10,6 @@ export default function StatCard({ label, value, change, trend, icon: Icon, to }
         to ? 'hover:shadow-card hover:border-primary-200 transition cursor-pointer' : ''
       }`}
     >
-=======
-import { TrendingUp, TrendingDown } from 'lucide-react'
-import Card from './Card.jsx'
-
-export default function StatCard({ label, value, change, trend, icon: Icon }) {
-  const isUp = trend === 'up'
-  return (
-    <Card className="flex items-center justify-between gap-4">
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
       <div className="min-w-0">
         <p className="text-sm text-gray-500 font-medium truncate">{label}</p>
         <p className="text-2xl font-bold text-gray-800 mt-1 truncate">{value}</p>
@@ -42,9 +32,6 @@ export default function StatCard({ label, value, change, trend, icon: Icon }) {
       )}
     </Card>
   )
-<<<<<<< HEAD
 
   return to ? <Link to={to} className="block">{content}</Link> : content
-=======
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 }

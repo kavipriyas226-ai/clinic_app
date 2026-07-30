@@ -1,25 +1,17 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-<<<<<<< HEAD
 import { User, Phone, Stethoscope, FileText, Save, AlertCircle } from 'lucide-react'
-=======
-import { User, Phone, Stethoscope, FileText, Save } from 'lucide-react'
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import Button from '../components/common/Button.jsx'
 import { FormField, TextInput, TextArea, Select } from '../components/common/FormField.jsx'
-<<<<<<< HEAD
 import { createPatient } from '../api/patients.js'
-=======
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 
 const sectionIcon = 'w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0'
 
 export default function RegisterPatient() {
   const navigate = useNavigate()
   const [submitted, setSubmitted] = useState(false)
-<<<<<<< HEAD
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -54,13 +46,6 @@ export default function RegisterPatient() {
       setError(err.response?.data?.message || 'Could not register patient. Please check the form and try again.')
       setSubmitting(false)
     }
-=======
-
-  function handleSubmit(e) {
-    e.preventDefault()
-    setSubmitted(true)
-    setTimeout(() => navigate('/patients'), 900)
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   }
 
   return (
@@ -79,7 +64,6 @@ export default function RegisterPatient() {
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <FormField label="Full Name" required>
-<<<<<<< HEAD
               <TextInput name="name" placeholder="e.g. Riya Sharma" required />
             </FormField>
             <FormField label="Date of Birth" required>
@@ -87,15 +71,6 @@ export default function RegisterPatient() {
             </FormField>
             <FormField label="Gender" required>
               <Select name="gender" required defaultValue="">
-=======
-              <TextInput placeholder="e.g. Riya Sharma" required />
-            </FormField>
-            <FormField label="Date of Birth" required>
-              <TextInput type="date" required />
-            </FormField>
-            <FormField label="Gender" required>
-              <Select required defaultValue="">
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                 <option value="" disabled>Select gender</option>
                 <option>Female</option>
                 <option>Male</option>
@@ -103,11 +78,7 @@ export default function RegisterPatient() {
               </Select>
             </FormField>
             <FormField label="Blood Group">
-<<<<<<< HEAD
               <Select name="bloodGroup" defaultValue="">
-=======
-              <Select defaultValue="">
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                 <option value="">Unknown</option>
                 <option>A+</option><option>A-</option>
                 <option>B+</option><option>B-</option>
@@ -129,7 +100,6 @@ export default function RegisterPatient() {
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <FormField label="Phone Number" required>
-<<<<<<< HEAD
               <TextInput name="phone" type="tel" placeholder="+91 90000 00000" required />
             </FormField>
             <FormField label="Email Address">
@@ -143,21 +113,6 @@ export default function RegisterPatient() {
             </FormField>
             <FormField label="Referred By">
               <TextInput name="referredBy" placeholder="e.g. Dr. Vikram Sen / Walk-in" />
-=======
-              <TextInput type="tel" placeholder="+91 90000 00000" required />
-            </FormField>
-            <FormField label="Email Address">
-              <TextInput type="email" placeholder="patient@example.com" />
-            </FormField>
-            <FormField label="Address" className="sm:col-span-2">
-              <TextArea placeholder="Street, area, city, state, PIN code" />
-            </FormField>
-            <FormField label="Emergency Contact">
-              <TextInput type="tel" placeholder="+91 90000 00000" />
-            </FormField>
-            <FormField label="Referred By">
-              <TextInput placeholder="e.g. Dr. Vikram Sen / Walk-in" />
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
             </FormField>
           </div>
         </Card>
@@ -173,11 +128,7 @@ export default function RegisterPatient() {
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <FormField label="Concern Type" required>
-<<<<<<< HEAD
               <Select name="concern" required defaultValue="">
-=======
-              <Select required defaultValue="">
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                 <option value="" disabled>Select concern</option>
                 <option>Acne & Scarring</option>
                 <option>Hair Fall</option>
@@ -191,24 +142,12 @@ export default function RegisterPatient() {
               </Select>
             </FormField>
             <FormField label="Assigned Doctor" required>
-<<<<<<< HEAD
               <Select name="doctor" required defaultValue="Dr. Anita Rao">
                 <option>Dr. Anita Rao</option>
               </Select>
             </FormField>
             <FormField label="Concern Description" className="sm:col-span-2">
               <TextArea name="concernDescription" placeholder="Describe symptoms, duration, and severity..." />
-=======
-              <Select required defaultValue="">
-                <option value="" disabled>Select doctor</option>
-                <option>Dr. Anita Rao</option>
-                <option>Dr. Vikram Sen</option>
-                <option>Dr. Neha Kapoor</option>
-              </Select>
-            </FormField>
-            <FormField label="Concern Description" className="sm:col-span-2">
-              <TextArea placeholder="Describe symptoms, duration, and severity..." />
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
             </FormField>
           </div>
         </Card>
@@ -224,7 +163,6 @@ export default function RegisterPatient() {
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <FormField label="Known Allergies">
-<<<<<<< HEAD
               <TextInput name="allergies" placeholder="e.g. None known / Penicillin" />
             </FormField>
             <FormField label="Existing Medications">
@@ -232,20 +170,10 @@ export default function RegisterPatient() {
             </FormField>
             <FormField label="Medical History" className="sm:col-span-2">
               <TextArea name="medicalNotes" placeholder="Relevant past conditions, surgeries, family history..." />
-=======
-              <TextInput placeholder="e.g. None known / Penicillin" />
-            </FormField>
-            <FormField label="Existing Medications">
-              <TextInput placeholder="e.g. None / Isotretinoin 20mg" />
-            </FormField>
-            <FormField label="Medical History" className="sm:col-span-2">
-              <TextArea placeholder="Relevant past conditions, surgeries, family history..." />
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
             </FormField>
           </div>
         </Card>
 
-<<<<<<< HEAD
         {error && (
           <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
             <AlertCircle size={15} className="shrink-0" />
@@ -253,19 +181,12 @@ export default function RegisterPatient() {
           </div>
         )}
 
-=======
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
         <div className="flex items-center justify-end gap-3">
           <Button variant="outline" type="button" onClick={() => navigate('/patients')}>
             Cancel
           </Button>
-<<<<<<< HEAD
           <Button type="submit" icon={Save} disabled={submitting}>
             {submitted ? 'Saved!' : submitting ? 'Saving…' : 'Save Patient'}
-=======
-          <Button type="submit" icon={Save}>
-            {submitted ? 'Saved!' : 'Save Patient'}
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
           </Button>
         </div>
       </form>

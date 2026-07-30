@@ -5,10 +5,7 @@
 html, body {
   background-color: #FAF8FF;
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-<<<<<<< HEAD
   overscroll-behavior: none;
-=======
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 }
 
 * {
@@ -37,7 +34,6 @@ html, body {
     transition-duration: 0.001ms !important;
   }
 }
-<<<<<<< HEAD
 
 @media print {
   @page {
@@ -49,5 +45,3 @@ html, body {
     background: #fff;
   }
 }
-=======
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293

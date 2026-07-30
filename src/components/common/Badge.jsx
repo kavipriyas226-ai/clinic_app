@@ -8,20 +8,10 @@ const palettes = {
 }
 
 const statusMap = {
-<<<<<<< HEAD
   New: 'blue',
   Inactive: 'gray',
   Paid: 'green',
   Unpaid: 'red',
-=======
-  Active: 'green',
-  New: 'blue',
-  'Follow-up': 'yellow',
-  Inactive: 'gray',
-  Paid: 'green',
-  Pending: 'yellow',
-  Overdue: 'red',
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   'Low Stock': 'red',
   'In Stock': 'green',
 }

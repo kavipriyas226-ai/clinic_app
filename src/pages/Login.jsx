@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-<<<<<<< HEAD
 import { Mail, Lock, Eye, EyeOff, Sparkles, AlertCircle } from 'lucide-react'
 import Button from '../components/common/Button.jsx'
 import { login } from '../api/auth.js'
@@ -34,20 +33,6 @@ export default function Login() {
     } finally {
       setSubmitting(false)
     }
-=======
-import { Mail, Lock, Eye, EyeOff, Sparkles } from 'lucide-react'
-import Button from '../components/common/Button.jsx'
-import { clinicProfile } from '../data/mockData.js'
-
-export default function Login() {
-  const [showPassword, setShowPassword] = useState(false)
-  const navigate = useNavigate()
-
-  function handleSubmit(e) {
-    e.preventDefault()
-    // No real auth — this is a frontend-only demo.
-    navigate('/dashboard')
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   }
 
   return (
@@ -58,7 +43,6 @@ export default function Login() {
           <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10" />
           <div className="absolute bottom-0 -left-10 w-40 h-40 rounded-full bg-white/10" />
           <div className="relative z-10">
-<<<<<<< HEAD
             <img
               src={clinicProfile?.logoDataUrl || logo}
               alt={clinicProfile?.name || 'Devs Hair & Skin Clinic'}
@@ -68,13 +52,6 @@ export default function Login() {
             />
             <h2 className="text-2xl font-bold leading-snug">{clinicProfile?.name || 'Devs Hair & Skin Clinic'}</h2>
             <p className="text-primary-100 mt-2 text-sm">{clinicProfile?.tagline}</p>
-=======
-            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center font-bold text-lg mb-6">
-              {clinicProfile.logoInitials}
-            </div>
-            <h2 className="text-2xl font-bold leading-snug">{clinicProfile.name}</h2>
-            <p className="text-primary-100 mt-2 text-sm">{clinicProfile.tagline}</p>
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
           </div>
           <div className="relative z-10 flex items-center gap-2 text-primary-100 text-xs">
             <Sparkles size={14} />
@@ -95,12 +72,8 @@ export default function Login() {
                 <input
                   type="email"
                   required
-<<<<<<< HEAD
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-=======
-                  defaultValue="anita.rao@dermacareclinic.in"
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                   placeholder="you@clinic.com"
                   className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition"
                 />
@@ -114,12 +87,8 @@ export default function Login() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
-<<<<<<< HEAD
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-=======
-                  defaultValue="demo1234"
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
                   placeholder="••••••••"
                   className="w-full pl-9 pr-9 py-2.5 text-sm rounded-xl border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition"
                 />
@@ -143,7 +112,6 @@ export default function Login() {
               </a>
             </div>
 
-<<<<<<< HEAD
             {error && (
               <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
                 <AlertCircle size={15} className="shrink-0" />
@@ -155,16 +123,6 @@ export default function Login() {
               {submitting ? 'Signing in…' : 'Sign In'}
             </Button>
           </form>
-=======
-            <Button type="submit" className="w-full" size="lg">
-              Sign In
-            </Button>
-          </form>
-
-          <p className="text-xs text-gray-400 text-center mt-6">
-            Demo build — no real authentication is performed.
-          </p>
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
         </div>
       </div>
     </div>

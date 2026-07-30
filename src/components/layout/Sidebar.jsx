@@ -14,12 +14,8 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
-<<<<<<< HEAD
 import logo from '../../assets/logo.png'
 import { useClinicProfile } from '../../context/ClinicProfileContext.jsx'
-=======
-import { clinicProfile } from '../../data/mockData.js'
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -34,12 +30,9 @@ const navItems = [
 ]
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }) {
-<<<<<<< HEAD
   const { profile } = useClinicProfile()
   const clinicShortName = profile?.name || 'Devs Hair & Skin'
 
-=======
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
   return (
     <>
       {/* Mobile overlay */}
@@ -51,18 +44,13 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile
       )}
 
       <aside
-<<<<<<< HEAD
         className={`fixed lg:sticky top-0 h-screen z-50 lg:z-0 bg-white border-r border-primary-100/70 flex flex-col transition-all duration-200 print:hidden
-=======
-        className={`fixed lg:sticky top-0 h-screen z-50 lg:z-0 bg-white border-r border-primary-100/70 flex flex-col transition-all duration-200
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
           ${collapsed ? 'lg:w-[76px]' : 'lg:w-64'}
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
           w-64`}
       >
         <div className="flex items-center justify-between px-4 h-16 border-b border-primary-100/70 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-<<<<<<< HEAD
             <img
               src={profile?.logoDataUrl || logo}
               alt={clinicShortName}
@@ -72,13 +60,6 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile
             />
             {!collapsed && (
               <span className="font-bold text-gray-800 text-sm truncate">{clinicShortName}</span>
-=======
-            <div className="w-9 h-9 rounded-xl bg-primary-500 text-white flex items-center justify-center font-bold shrink-0">
-              {clinicProfile.logoInitials}
-            </div>
-            {!collapsed && (
-              <span className="font-bold text-gray-800 text-sm truncate">DermaCare</span>
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
             )}
           </div>
           <button
@@ -125,11 +106,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile
             <div className="bg-primary-50 rounded-xl p-3 flex items-center gap-2">
               <Sparkles size={16} className="text-primary-500 shrink-0" />
               <p className="text-xs text-primary-700 font-medium leading-snug">
-<<<<<<< HEAD
                 Connected to Devs Clinic API
-=======
-                Frontend demo — mock data only
->>>>>>> 600209e07c32b1f3f515ecd74a8d9c1b3620a293
               </p>
             </div>
           </div>
