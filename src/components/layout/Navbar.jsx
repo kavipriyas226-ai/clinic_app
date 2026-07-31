@@ -1,5 +1,5 @@
 import { Menu, Bell, Search, LogOut, ChevronDown, AlertTriangle, CheckCheck } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../../api/notifications.js'
 import { logout } from '../../api/auth.js'
@@ -28,6 +28,9 @@ export default function Navbar({ onMenuClick }) {
   const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
 
+  const notifRef = useRef(null)
+  const profileRef = useRef(null)
+
   function handleSearchSubmit(e) {
     e.preventDefault()
     const trimmed = searchQuery.trim()
@@ -45,6 +48,21 @@ export default function Navbar({ onMenuClick }) {
     return () => clearInterval(interval)
   }, [])
 
+  // Close either dropdown when clicking anywhere outside it — attached once, checked
+  // against whichever menu is currently open.
+  useEffect(() => {
+    function handleOutsideClick(e) {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false)
+      }
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [])
+
   async function handleNotificationClick(notification) {
     setNotifOpen(false)
     if (!notification.read) {
@@ -56,8 +74,8 @@ export default function Navbar({ onMenuClick }) {
         // ignore — next poll will resync
       }
     }
-    if (notification.type === 'LOW_STOCK') {
-      navigate('/inventory')
+    if (notification.type === 'LOW_STOCK' && notification.itemId) {
+      navigate('/inventory', { state: { editItemId: notification.itemId } })
     }
   }
 
@@ -93,7 +111,7 @@ export default function Navbar({ onMenuClick }) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        <div className="relative">
+        <div className="relative" ref={notifRef}>
           <button
             onClick={() => setNotifOpen((v) => !v)}
             className="relative p-2 rounded-xl text-gray-500 hover:bg-primary-50 hover:text-primary-600 transition"
@@ -101,59 +119,56 @@ export default function Navbar({ onMenuClick }) {
             <Bell size={19} />
             {unreadCount > 0 && (
               <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
-                {unreadCount}
+                {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
           </button>
 
           {notifOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setNotifOpen(false)} />
-              <div className="absolute right-0 mt-2 w-80 max-w-[90vw] bg-white rounded-xl shadow-card border border-gray-100 py-2 z-20">
-                <div className="px-4 py-1.5 flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-bold text-gray-800">Notifications</h4>
-                  {unreadCount > 0 && (
-                    <button
-                      onClick={handleMarkAllRead}
-                      className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700"
-                    >
-                      <CheckCheck size={13} /> Mark all read
-                    </button>
-                  )}
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-6">No notifications yet.</p>
-                  ) : (
-                    notifications.map((notification) => (
-                      <button
-                        key={notification.id}
-                        onClick={() => handleNotificationClick(notification)}
-                        className={`w-full flex items-start gap-2.5 px-4 py-2.5 text-left hover:bg-primary-50/40 transition ${
-                          !notification.read ? 'bg-primary-50/60' : ''
-                        }`}
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 mt-0.5">
-                          <AlertTriangle size={14} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-gray-800 truncate">{notification.itemName}</p>
-                          <p className="text-xs text-gray-500">{notification.message}</p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">{timeAgo(notification.createdAt)}</p>
-                        </div>
-                        {!notification.read && (
-                          <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0 mt-1.5" />
-                        )}
-                      </button>
-                    ))
-                  )}
-                </div>
+            <div className="absolute right-0 mt-2 w-80 max-w-[90vw] bg-white rounded-xl shadow-card border border-gray-100 py-2 z-20">
+              <div className="px-4 py-1.5 flex items-center justify-between gap-2">
+                <h4 className="text-sm font-bold text-gray-800">Notifications</h4>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700"
+                  >
+                    <CheckCheck size={13} /> Mark all read
+                  </button>
+                )}
               </div>
-            </>
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">No notifications yet.</p>
+                ) : (
+                  notifications.map((notification) => (
+                    <button
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`w-full flex items-start gap-2.5 px-4 py-2.5 text-left hover:bg-primary-50/40 transition ${
+                        !notification.read ? 'bg-primary-50/60' : ''
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <AlertTriangle size={14} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{notification.itemName}</p>
+                        <p className="text-xs text-gray-500">{notification.message}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{timeAgo(notification.createdAt)}</p>
+                      </div>
+                      {!notification.read && (
+                        <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0 mt-1.5" />
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
           )}
         </div>
 
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button
             onClick={() => setProfileOpen((v) => !v)}
             className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl hover:bg-primary-50 transition"
@@ -168,30 +183,27 @@ export default function Navbar({ onMenuClick }) {
           </button>
 
           {profileOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setProfileOpen(false)} />
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-card border border-gray-100 py-1.5 z-20">
-                <button
-                  onClick={() => {
-                    setProfileOpen(false)
-                    navigate('/settings')
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition"
-                >
-                  Settings
-                </button>
-                <button
-                  onClick={() => {
-                    setProfileOpen(false)
-                    logout()
-                    navigate('/login')
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition flex items-center gap-2"
-                >
-                  <LogOut size={14} /> Log out
-                </button>
-              </div>
-            </>
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-card border border-gray-100 py-1.5 z-20">
+              <button
+                onClick={() => {
+                  setProfileOpen(false)
+                  navigate('/settings')
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition"
+              >
+                Settings
+              </button>
+              <button
+                onClick={() => {
+                  setProfileOpen(false)
+                  logout()
+                  navigate('/login')
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition flex items-center gap-2"
+              >
+                <LogOut size={14} /> Log out
+              </button>
+            </div>
           )}
         </div>
       </div>

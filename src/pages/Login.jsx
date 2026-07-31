@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Mail, Lock, Eye, EyeOff, Sparkles, AlertCircle } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Sparkles, AlertCircle, KeyRound, Phone } from 'lucide-react'
 import Button from '../components/common/Button.jsx'
+import Modal from '../components/common/Modal.jsx'
 import { login } from '../api/auth.js'
 import { useClinicProfile } from '../context/ClinicProfileContext.jsx'
 import logo from '../assets/logo.png'
@@ -12,6 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
   const { profile: clinicProfile } = useClinicProfile()
   const navigate = useNavigate()
 
@@ -107,9 +109,13 @@ export default function Login() {
                 <input type="checkbox" className="rounded border-gray-300 text-primary-500 focus:ring-primary-200" defaultChecked />
                 Remember me
               </label>
-              <a href="#" className="text-primary-600 font-medium hover:underline">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-primary-600 font-medium hover:underline"
+              >
                 Forgot password?
-              </a>
+              </button>
             </div>
 
             {error && (
@@ -125,6 +131,47 @@ export default function Login() {
           </form>
         </div>
       </div>
+
+      <Modal
+        open={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+        title="Forgot Password"
+      >
+        <div className="space-y-4 text-sm text-gray-600">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
+              <KeyRound size={17} />
+            </div>
+            <p>
+              {clinicProfile?.name || 'This clinic'} uses a single administrator account, so there's no
+              self-service email reset — passwords are changed directly from{' '}
+              <span className="font-semibold text-gray-800">Settings → Account</span> once signed in.
+            </p>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
+              <Phone size={17} />
+            </div>
+            <div>
+              <p>If you're locked out, contact the clinic administrator to reset it for you:</p>
+              <ul className="mt-1.5 space-y-0.5">
+                {clinicProfile?.phone && (
+                  <li className="font-medium text-gray-800">{clinicProfile.phone}</li>
+                )}
+                {clinicProfile?.email && (
+                  <li className="font-medium text-gray-800">{clinicProfile.email}</li>
+                )}
+                {!clinicProfile?.phone && !clinicProfile?.email && (
+                  <li className="text-gray-400">No contact details on file yet — add them in Settings → Clinic Profile.</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end pt-5">
+          <Button onClick={() => setShowForgotPassword(false)}>Got it</Button>
+        </div>
+      </Modal>
     </div>
   )
 }

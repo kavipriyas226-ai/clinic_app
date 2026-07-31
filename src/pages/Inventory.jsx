@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { PackagePlus, Stethoscope, Filter, AlertTriangle, Eye, Pencil, Check } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
@@ -14,6 +15,9 @@ import { getTreatmentOptions, createTreatmentOption, updateTreatmentOption } fro
 const TREATMENT_CATEGORIES = ['Skin Treatments', 'Hair Treatments', 'Cosmetic Procedures']
 
 export default function Inventory() {
+  const location = useLocation()
+  const editItemId = location.state?.editItemId
+
   const [inventory, setInventory] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -40,6 +44,13 @@ export default function Inventory() {
       .then(setTreatments)
       .finally(() => setTreatmentsLoading(false))
   }, [])
+
+  // Arrived here from a low-stock notification click — open that medicine's Edit modal directly.
+  useEffect(() => {
+    if (!editItemId || inventory.length === 0) return
+    const target = inventory.find((i) => i.id === editItemId)
+    if (target) setEditTarget(target)
+  }, [editItemId, inventory])
 
   const categories = ['All', ...new Set(inventory.map((i) => i.category))]
 
