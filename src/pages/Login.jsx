@@ -153,17 +153,11 @@ export default function Login() {
               <Phone size={17} />
             </div>
             <div>
-              <p>If you're locked out, contact the clinic administrator to reset it for you:</p>
+              <p>If you're locked out, contact the administrator to reset it for you:</p>
               <ul className="mt-1.5 space-y-0.5">
-                {clinicProfile?.phone && (
-                  <li className="font-medium text-gray-800">{clinicProfile.phone}</li>
-                )}
-                {clinicProfile?.email && (
-                  <li className="font-medium text-gray-800">{clinicProfile.email}</li>
-                )}
-                {!clinicProfile?.phone && !clinicProfile?.email && (
-                  <li className="text-gray-400">No contact details on file yet — add them in Settings → Clinic Profile.</li>
-                )}
+                <li className="font-semibold text-gray-800">Lax360 Pvt Ltd</li>
+                <li className="font-medium text-gray-800">Phone: 95666 79928 or 86676 30258</li>
+                <li className="font-medium text-gray-800">Email: lax360pvt2025@gmail.com</li>
               </ul>
             </div>
           </div>

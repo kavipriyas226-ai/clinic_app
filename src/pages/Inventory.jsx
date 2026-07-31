@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import { PackagePlus, Stethoscope, Filter, AlertTriangle, Eye, Pencil, Check } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { PackagePlus, Stethoscope, Filter, AlertTriangle, Eye, Pencil, Trash2, Check } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import SearchInput from '../components/common/SearchInput.jsx'
@@ -9,13 +9,14 @@ import Badge from '../components/common/Badge.jsx'
 import Button from '../components/common/Button.jsx'
 import Modal from '../components/common/Modal.jsx'
 import { FormField, TextInput, Select } from '../components/common/FormField.jsx'
-import { getInventory, createInventoryItem, updateInventoryItem } from '../api/inventory.js'
-import { getTreatmentOptions, createTreatmentOption, updateTreatmentOption } from '../api/treatments.js'
+import { getInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem } from '../api/inventory.js'
+import { getTreatmentOptions, createTreatmentOption, updateTreatmentOption, deleteTreatmentOption } from '../api/treatments.js'
 
 const TREATMENT_CATEGORIES = ['Skin Treatments', 'Hair Treatments', 'Cosmetic Procedures']
 
 export default function Inventory() {
   const location = useLocation()
+  const navigate = useNavigate()
   const editItemId = location.state?.editItemId
 
   const [inventory, setInventory] = useState([])
@@ -26,6 +27,7 @@ export default function Inventory() {
   const [showAdd, setShowAdd] = useState(false)
   const [viewTarget, setViewTarget] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const [treatments, setTreatments] = useState([])
   const [treatmentsLoading, setTreatmentsLoading] = useState(true)
@@ -35,6 +37,9 @@ export default function Inventory() {
   const [treatmentAdded, setTreatmentAdded] = useState('')
   const [treatmentViewTarget, setTreatmentViewTarget] = useState(null)
   const [treatmentEditTarget, setTreatmentEditTarget] = useState(null)
+  const [treatmentDeleteTarget, setTreatmentDeleteTarget] = useState(null)
+
+  const autoEditHandled = useRef(false)
 
   useEffect(() => {
     getInventory()
@@ -45,12 +50,21 @@ export default function Inventory() {
       .finally(() => setTreatmentsLoading(false))
   }, [])
 
-  // Arrived here from a low-stock notification click — open that medicine's Edit modal directly.
+  // Arrived here from a low-stock notification click — open that medicine's Edit modal
+  // directly, exactly once. Without the "handled" guard, saving/closing the modal would
+  // re-trigger this on the next inventory refresh (location.state persists across
+  // re-renders) and immediately reopen it.
   useEffect(() => {
-    if (!editItemId || inventory.length === 0) return
+    if (!editItemId || inventory.length === 0 || autoEditHandled.current) return
     const target = inventory.find((i) => i.id === editItemId)
-    if (target) setEditTarget(target)
-  }, [editItemId, inventory])
+    if (target) {
+      setEditTarget(target)
+      autoEditHandled.current = true
+      // Strip editItemId from history state so a later refresh of this page doesn't
+      // reopen the same item's editor again.
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [editItemId, inventory, location.pathname, navigate])
 
   const categories = ['All', ...new Set(inventory.map((i) => i.category))]
 
@@ -110,6 +124,18 @@ export default function Inventory() {
     const updated = await updateInventoryItem(editTarget.id, payload)
     setInventory((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
     setEditTarget(null)
+  }
+
+  async function confirmDelete() {
+    await deleteInventoryItem(deleteTarget.id)
+    setInventory((prev) => prev.filter((i) => i.id !== deleteTarget.id))
+    setDeleteTarget(null)
+  }
+
+  async function confirmDeleteTreatment() {
+    await deleteTreatmentOption(treatmentDeleteTarget.id)
+    setTreatments((prev) => prev.filter((t) => t.id !== treatmentDeleteTarget.id))
+    setTreatmentDeleteTarget(null)
   }
 
   async function handleAddTreatment(e) {
@@ -223,6 +249,13 @@ export default function Inventory() {
                     >
                       <Pencil size={15} />
                     </button>
+                    <button
+                      onClick={() => setDeleteTarget(item)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:bg-rose-100 hover:text-rose-600 transition"
+                      title="Delete"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -274,6 +307,13 @@ export default function Inventory() {
                     title="Edit"
                   >
                     <Pencil size={15} />
+                  </button>
+                  <button
+                    onClick={() => setTreatmentDeleteTarget(t)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:bg-rose-100 hover:text-rose-600 transition"
+                    title="Delete"
+                  >
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </td>
@@ -453,6 +493,40 @@ export default function Inventory() {
             </div>
           </form>
         )}
+      </Modal>
+
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete Medicine"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="danger" onClick={confirmDelete}>Delete</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-600">
+          Are you sure you want to delete <span className="font-semibold">{deleteTarget?.name}</span>?
+          This action cannot be undone.
+        </p>
+      </Modal>
+
+      <Modal
+        open={!!treatmentDeleteTarget}
+        onClose={() => setTreatmentDeleteTarget(null)}
+        title="Delete Treatment"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setTreatmentDeleteTarget(null)}>Cancel</Button>
+            <Button variant="danger" onClick={confirmDeleteTreatment}>Delete</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-600">
+          Are you sure you want to delete <span className="font-semibold">{treatmentDeleteTarget?.name}</span>?
+          This action cannot be undone.
+        </p>
       </Modal>
     </div>
   )

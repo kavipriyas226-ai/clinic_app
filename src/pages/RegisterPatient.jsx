@@ -142,9 +142,7 @@ export default function RegisterPatient() {
               </Select>
             </FormField>
             <FormField label="Assigned Doctor" required>
-              <Select name="doctor" required defaultValue="Dr. Anita Rao">
-                <option>Dr. Anita Rao</option>
-              </Select>
+              <TextInput name="doctor" required defaultValue="Dr. Anita Rao" placeholder="e.g. Dr. Anita Rao" />
             </FormField>
             <FormField label="Concern Description" className="sm:col-span-2">
               <TextArea name="concernDescription" placeholder="Describe symptoms, duration, and severity..." />

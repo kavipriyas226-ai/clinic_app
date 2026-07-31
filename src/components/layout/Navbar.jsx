@@ -1,7 +1,7 @@
-import { Menu, Bell, Search, LogOut, ChevronDown, AlertTriangle, CheckCheck } from 'lucide-react'
+import { Menu, Bell, Search, LogOut, ChevronDown, AlertTriangle, CheckCheck, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../../api/notifications.js'
+import { getNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, deleteNotification } from '../../api/notifications.js'
 import { logout } from '../../api/auth.js'
 
 const currentUser = { name: 'Devsclinic', avatarInitials: 'DC' }
@@ -79,6 +79,19 @@ export default function Navbar({ onMenuClick }) {
     }
   }
 
+  async function handleDeleteNotification(e, notification) {
+    e.stopPropagation()
+    try {
+      await deleteNotification(notification.id)
+    } catch {
+      // ignore — next poll will resync
+    }
+    setNotifications((prev) => prev.filter((n) => n.id !== notification.id))
+    if (!notification.read) {
+      setUnreadCount((prev) => Math.max(0, prev - 1))
+    }
+  }
+
   async function handleMarkAllRead() {
     try {
       await markAllNotificationsRead()
@@ -142,25 +155,36 @@ export default function Navbar({ onMenuClick }) {
                   <p className="text-sm text-gray-400 text-center py-6">No notifications yet.</p>
                 ) : (
                   notifications.map((notification) => (
-                    <button
+                    <div
                       key={notification.id}
-                      onClick={() => handleNotificationClick(notification)}
-                      className={`w-full flex items-start gap-2.5 px-4 py-2.5 text-left hover:bg-primary-50/40 transition ${
+                      className={`flex items-start gap-1 px-2 py-2.5 hover:bg-primary-50/40 transition ${
                         !notification.read ? 'bg-primary-50/60' : ''
                       }`}
                     >
-                      <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 mt-0.5">
-                        <AlertTriangle size={14} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{notification.itemName}</p>
-                        <p className="text-xs text-gray-500">{notification.message}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">{timeAgo(notification.createdAt)}</p>
-                      </div>
-                      {!notification.read && (
-                        <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0 mt-1.5" />
-                      )}
-                    </button>
+                      <button
+                        onClick={() => handleNotificationClick(notification)}
+                        className="flex-1 min-w-0 flex items-start gap-2.5 text-left pl-2"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 mt-0.5">
+                          <AlertTriangle size={14} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-gray-800 truncate">{notification.itemName}</p>
+                          <p className="text-xs text-gray-500">{notification.message}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">{timeAgo(notification.createdAt)}</p>
+                        </div>
+                        {!notification.read && (
+                          <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0 mt-1.5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteNotification(e, notification)}
+                        className="p-1.5 rounded-lg text-gray-300 hover:bg-rose-100 hover:text-rose-600 shrink-0 mt-0.5 transition"
+                        title="Delete"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   ))
                 )}
               </div>

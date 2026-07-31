@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CreditCard, Banknote, Smartphone, Filter, History } from 'lucide-react'
+import { CreditCard, Banknote, Smartphone, Filter, History, Eye, Pencil, Trash2 } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import SearchInput from '../components/common/SearchInput.jsx'
 import Table from '../components/common/Table.jsx'
 import Badge from '../components/common/Badge.jsx'
-import { Select } from '../components/common/FormField.jsx'
+import Button from '../components/common/Button.jsx'
+import Modal from '../components/common/Modal.jsx'
+import { FormField, Select } from '../components/common/FormField.jsx'
 import StatCard from '../components/common/StatCard.jsx'
-import { getInvoices, getPaymentsSummary } from '../api/invoices.js'
+import { getInvoices, getPaymentsSummary, updateInvoice, deleteInvoice } from '../api/invoices.js'
 
 const methodIcon = {
   UPI: Smartphone,
@@ -23,6 +25,9 @@ export default function Payments() {
   const [statusFilter, setStatusFilter] = useState('All')
   const [collectedPeriod, setCollectedPeriod] = useState('total')
   const [totals, setTotals] = useState({ paid: 0, unpaid: 0 })
+  const [viewTarget, setViewTarget] = useState(null)
+  const [editTarget, setEditTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     getInvoices()
@@ -45,6 +50,24 @@ export default function Payments() {
       return matchesQuery && matchesStatus
     })
   }, [invoices, query, statusFilter])
+
+  async function handleEdit(e) {
+    e.preventDefault()
+    const form = new FormData(e.target)
+    const payload = {
+      status: form.get('status'),
+      method: form.get('method'),
+    }
+    const updated = await updateInvoice(editTarget.id, payload)
+    setInvoices((prev) => prev.map((inv) => (inv.id === updated.id ? updated : inv)))
+    setEditTarget(null)
+  }
+
+  async function confirmDelete() {
+    await deleteInvoice(deleteTarget.id)
+    setInvoices((prev) => prev.filter((inv) => inv.id !== deleteTarget.id))
+    setDeleteTarget(null)
+  }
 
   return (
     <div>
@@ -93,15 +116,15 @@ export default function Payments() {
           </div>
         </div>
 
-        <Table columns={['Invoice ID', 'Patient', 'Date', 'Amount', 'Method', 'Status']}>
+        <Table columns={['Invoice ID', 'Patient', 'Date', 'Amount', 'Method', 'Status', 'Actions']}>
           {loading && (
             <tr>
-              <td colSpan={6} className="py-10 text-center text-sm text-gray-400">Loading payments…</td>
+              <td colSpan={7} className="py-10 text-center text-sm text-gray-400">Loading payments…</td>
             </tr>
           )}
           {!loading && filtered.length === 0 && (
             <tr>
-              <td colSpan={6} className="py-10 text-center text-sm text-gray-400">No payments found.</td>
+              <td colSpan={7} className="py-10 text-center text-sm text-gray-400">No payments found.</td>
             </tr>
           )}
           {filtered.map((inv) => {
@@ -118,11 +141,123 @@ export default function Payments() {
                   </span>
                 </td>
                 <td className="py-3 px-3"><Badge>{inv.status}</Badge></td>
+                <td className="py-3 px-3">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setViewTarget(inv)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:bg-primary-100 hover:text-primary-600 transition"
+                      title="View"
+                    >
+                      <Eye size={15} />
+                    </button>
+                    <button
+                      onClick={() => setEditTarget(inv)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:bg-primary-100 hover:text-primary-600 transition"
+                      title="Edit"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(inv)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:bg-rose-100 hover:text-rose-600 transition"
+                      title="Delete"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </td>
               </tr>
             )
           })}
         </Table>
       </Card>
+
+      <Modal
+        open={!!viewTarget}
+        onClose={() => setViewTarget(null)}
+        title="Payment Details"
+      >
+        {viewTarget && (
+          <div className="space-y-3 text-sm">
+            <DetailRow label="Invoice ID" value={viewTarget.id} />
+            <DetailRow label="Patient" value={viewTarget.patientName} />
+            <DetailRow label="Date" value={viewTarget.date} />
+            <DetailRow label="Method" value={viewTarget.method} />
+            <DetailRow label="Status" value={viewTarget.status} />
+            <div className="pt-2 border-t border-gray-100">
+              {viewTarget.lineItems?.map((item, idx) => (
+                <div key={idx} className="flex justify-between py-1 text-gray-600">
+                  <span className="truncate pr-2">{item.name} x{item.qty}</span>
+                  <span className="shrink-0">₹{item.amount.toLocaleString('en-IN')}</span>
+                </div>
+              ))}
+            </div>
+            <DetailRow label="Subtotal" value={`₹${viewTarget.subtotal.toLocaleString('en-IN')}`} />
+            {viewTarget.discountEnabled && (
+              <DetailRow label="Discount" value={`- ₹${viewTarget.discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} />
+            )}
+            {viewTarget.gstEnabled && (
+              <DetailRow label="GST" value={`+ ₹${viewTarget.gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} />
+            )}
+            <DetailRow label="Total" value={`₹${viewTarget.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} />
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        title="Edit Payment"
+      >
+        {editTarget && (
+          <form onSubmit={handleEdit} className="space-y-4">
+            <FormField label="Status" required>
+              <Select name="status" required defaultValue={editTarget.status}>
+                <option>Paid</option>
+                <option>Unpaid</option>
+              </Select>
+            </FormField>
+            <FormField label="Method" required>
+              <Select name="method" required defaultValue={editTarget.method}>
+                <option>UPI</option>
+                <option>Card</option>
+                <option>Cash</option>
+                <option value="—">—</option>
+              </Select>
+            </FormField>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete Payment"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="danger" onClick={confirmDelete}>Delete</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-600">
+          Are you sure you want to delete invoice <span className="font-semibold">{deleteTarget?.id}</span>?
+          This action cannot be undone.
+        </p>
+      </Modal>
+    </div>
+  )
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5 border-b border-gray-50 last:border-0">
+      <span className="text-gray-400">{label}</span>
+      <span className="font-medium text-gray-800 text-right">{value}</span>
     </div>
   )
 }

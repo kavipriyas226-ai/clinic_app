@@ -18,3 +18,7 @@ export async function markNotificationRead(id) {
 export async function markAllNotificationsRead() {
   await client.put('/notifications/read-all')
 }
+
+export async function deleteNotification(id) {
+  await client.delete(`/notifications/${id}`)
+}
