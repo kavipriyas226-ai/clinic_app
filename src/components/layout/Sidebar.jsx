@@ -49,17 +49,17 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
           w-64`}
       >
-        <div className="flex items-center justify-between px-4 h-16 border-b border-primary-100/70 shrink-0">
+        <div className="flex items-center justify-between px-4 h-20 border-b border-primary-100/70 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <img
               src={profile?.logoDataUrl || logo}
               alt={clinicShortName}
-              width={36}
-              height={36}
-              className="w-9 h-9 rounded-xl object-contain shrink-0"
+              width={48}
+              height={48}
+              className="w-12 h-12 rounded-xl object-contain shrink-0"
             />
             {!collapsed && (
-              <span className="font-bold text-gray-800 text-sm truncate">{clinicShortName}</span>
+              <span className="font-extrabold text-gray-800 text-base leading-tight truncate">{clinicShortName}</span>
             )}
           </div>
           <button

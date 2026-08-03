@@ -103,7 +103,7 @@ export default function Navbar({ onMenuClick }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur border-b border-primary-100/70 flex items-center justify-between px-4 sm:px-6 gap-4 print:hidden">
+    <header className="sticky top-0 z-30 h-20 bg-white/80 backdrop-blur border-b border-primary-100/70 flex items-center justify-between px-4 sm:px-6 gap-4 print:hidden">
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onMenuClick}

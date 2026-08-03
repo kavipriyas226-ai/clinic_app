@@ -1,6 +1,7 @@
 import axios from 'axios'
 
 const TOKEN_STORAGE_KEY = 'devs-clinic-token'
+const ROLE_STORAGE_KEY = 'devs-clinic-role'
 
 export function getToken() {
   return localStorage.getItem(TOKEN_STORAGE_KEY)
@@ -12,6 +13,19 @@ export function setToken(token) {
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_STORAGE_KEY)
+  localStorage.removeItem(ROLE_STORAGE_KEY)
+}
+
+export function getRole() {
+  return localStorage.getItem(ROLE_STORAGE_KEY)
+}
+
+export function setRole(role) {
+  localStorage.setItem(ROLE_STORAGE_KEY, role)
+}
+
+export function isAdmin() {
+  return getRole() === 'ADMIN'
 }
 
 const client = axios.create({

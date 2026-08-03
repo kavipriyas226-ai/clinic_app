@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Mail, Lock, Eye, EyeOff, Sparkles, AlertCircle, KeyRound, Phone } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Sparkles, AlertCircle, KeyRound, Phone, ShieldCheck, User } from 'lucide-react'
 import Button from '../components/common/Button.jsx'
 import Modal from '../components/common/Modal.jsx'
 import { login } from '../api/auth.js'
@@ -8,6 +8,7 @@ import { useClinicProfile } from '../context/ClinicProfileContext.jsx'
 import logo from '../assets/logo.png'
 
 export default function Login() {
+  const [loginType, setLoginType] = useState('ADMIN')
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,11 +23,11 @@ export default function Login() {
     setSubmitting(true)
     setError('')
     try {
-      await login(email.trim(), password)
+      await login(email.trim(), password, loginType)
       navigate('/dashboard')
     } catch (err) {
       if (err.response?.status === 401) {
-        setError('Incorrect username or password.')
+        setError(err.response?.data?.message || 'Incorrect username or password.')
       } else if (err.request) {
         setError("Couldn't reach the server. Make sure the backend is running.")
       } else {
@@ -48,11 +49,11 @@ export default function Login() {
             <img
               src={clinicProfile?.logoDataUrl || logo}
               alt={clinicProfile?.name || 'Devs Hair & Skin Clinic'}
-              width={48}
-              height={48}
-              className="w-12 h-12 rounded-xl object-contain bg-white mb-6"
+              width={72}
+              height={72}
+              className="w-[72px] h-[72px] rounded-xl object-contain bg-white mb-6"
             />
-            <h2 className="text-2xl font-bold leading-snug">{clinicProfile?.name || 'Devs Hair & Skin Clinic'}</h2>
+            <h2 className="text-3xl font-extrabold leading-tight">{clinicProfile?.name || 'Devs Hair & Skin Clinic'}</h2>
             <p className="text-primary-100 mt-2 text-sm">{clinicProfile?.tagline}</p>
           </div>
           <div className="relative z-10 flex items-center gap-2 text-primary-100 text-xs">
@@ -67,6 +68,34 @@ export default function Login() {
           <p className="text-sm text-gray-500 mt-1 mb-6">Sign in to manage your clinic</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Login Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLoginType('ADMIN')}
+                  className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold border transition ${
+                    loginType === 'ADMIN'
+                      ? 'bg-primary-500 text-white border-primary-500 shadow-soft'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-primary-300'
+                  }`}
+                >
+                  <ShieldCheck size={15} /> Admin Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginType('USER')}
+                  className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold border transition ${
+                    loginType === 'USER'
+                      ? 'bg-primary-500 text-white border-primary-500 shadow-soft'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-primary-300'
+                  }`}
+                >
+                  <User size={15} /> User Login
+                </button>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
               <div className="relative">
@@ -143,9 +172,9 @@ export default function Login() {
               <KeyRound size={17} />
             </div>
             <p>
-              {clinicProfile?.name || 'This clinic'} uses a single administrator account, so there's no
-              self-service email reset — passwords are changed directly from{' '}
-              <span className="font-semibold text-gray-800">Settings → Account</span> once signed in.
+              There's no self-service email reset — an administrator can reset any account's
+              password from <span className="font-semibold text-gray-800">Settings → Users</span> once
+              signed in.
             </p>
           </div>
           <div className="flex items-start gap-3">

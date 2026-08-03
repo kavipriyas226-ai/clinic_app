@@ -1,22 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
-import { Building2, Image, KeyRound, Save, Check, Eye, EyeOff, AlertCircle, X, Pencil } from 'lucide-react'
+import {
+  Building2, Image, Users as UsersIcon, Save, Check, AlertCircle, Pencil, Plus, Trash2,
+  KeyRound, ShieldCheck, User as UserIcon, ToggleLeft, ToggleRight,
+} from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import Button from '../components/common/Button.jsx'
-import { FormField, TextInput, TextArea } from '../components/common/FormField.jsx'
+import Modal from '../components/common/Modal.jsx'
+import Table from '../components/common/Table.jsx'
+import Badge from '../components/common/Badge.jsx'
+import { FormField, TextInput, TextArea, Select } from '../components/common/FormField.jsx'
 import { updateClinicProfile } from '../api/clinicProfile.js'
-import { getAccount, updateAccount } from '../api/account.js'
+import { getUsers, createUser, updateUser, deleteUser } from '../api/users.js'
 import { useClinicProfile } from '../context/ClinicProfileContext.jsx'
+import { isAdmin } from '../api/client.js'
 import logo from '../assets/logo.png'
 
-const tabs = [
-  { key: 'profile', label: 'Clinic Profile', icon: Building2 },
-  { key: 'account', label: 'Account', icon: KeyRound },
-]
-
 export default function Settings() {
+  const admin = isAdmin()
+  const tabs = admin
+    ? [{ key: 'profile', label: 'Clinic Profile', icon: Building2 }, { key: 'users', label: 'Users', icon: UsersIcon }]
+    : [{ key: 'profile', label: 'Clinic Profile', icon: Building2 }]
+
   const [activeTab, setActiveTab] = useState('profile')
-  const [accountLoading, setAccountLoading] = useState(true)
 
   const { profile: contextProfile, setProfile: setContextProfile, loading: profileLoading } = useClinicProfile()
 
@@ -28,17 +34,13 @@ export default function Settings() {
   const fileInputRef = useRef(null)
   const profileBeforeEdit = useRef(null)
 
-  const [username, setUsername] = useState('')
-  const [editingAccount, setEditingAccount] = useState(false)
-  const [showPasswordForm, setShowPasswordForm] = useState(false)
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
-  const [showNewPassword, setShowNewPassword] = useState(false)
-  const [accountError, setAccountError] = useState('')
-  const [accountSaved, setAccountSaved] = useState(false)
-  const [accountSaving, setAccountSaving] = useState(false)
-  const usernameBeforeEdit = useRef('')
+  const [users, setUsers] = useState([])
+  const [usersLoading, setUsersLoading] = useState(true)
+  const [showAddUser, setShowAddUser] = useState(false)
+  const [editUserTarget, setEditUserTarget] = useState(null)
+  const [resetPasswordTarget, setResetPasswordTarget] = useState(null)
+  const [deleteUserTarget, setDeleteUserTarget] = useState(null)
+  const [userError, setUserError] = useState('')
 
   useEffect(() => {
     if (contextProfile && !profile) {
@@ -47,10 +49,20 @@ export default function Settings() {
   }, [contextProfile, profile])
 
   useEffect(() => {
-    getAccount()
-      .then((account) => setUsername(account.username))
-      .finally(() => setAccountLoading(false))
-  }, [])
+    if (!admin) {
+      setUsersLoading(false)
+      return
+    }
+    refreshUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [admin])
+
+  function refreshUsers() {
+    setUsersLoading(true)
+    getUsers()
+      .then(setUsers)
+      .finally(() => setUsersLoading(false))
+  }
 
   function startEditProfile() {
     profileBeforeEdit.current = profile
@@ -61,27 +73,6 @@ export default function Settings() {
     setProfile(profileBeforeEdit.current)
     setLogoPreview(null)
     setEditingProfile(false)
-  }
-
-  function togglePasswordForm() {
-    setShowPasswordForm((v) => !v)
-    setCurrentPassword('')
-    setNewPassword('')
-    setAccountError('')
-  }
-
-  function startEditAccount() {
-    usernameBeforeEdit.current = username
-    setEditingAccount(true)
-  }
-
-  function cancelEditAccount() {
-    setUsername(usernameBeforeEdit.current)
-    setShowPasswordForm(false)
-    setCurrentPassword('')
-    setNewPassword('')
-    setAccountError('')
-    setEditingAccount(false)
   }
 
   function updateProfile(field, value) {
@@ -118,37 +109,95 @@ export default function Settings() {
     }
   }
 
-  async function handleSaveAccount(e) {
+  async function handleAddUser(e) {
     e.preventDefault()
-    setAccountError('')
-
-    if (!username.trim()) {
-      setAccountError('Email cannot be empty.')
-      return
+    setUserError('')
+    const form = new FormData(e.target)
+    const payload = {
+      username: form.get('username').trim(),
+      password: form.get('password'),
+      role: form.get('role'),
+      enabled: form.get('enabled') === 'on',
     }
-
-    setAccountSaving(true)
     try {
-      const updated = await updateAccount({
-        username: username.trim(),
-        currentPassword: showPasswordForm ? currentPassword : undefined,
-        newPassword: showPasswordForm ? newPassword : undefined,
-      })
-      setUsername(updated.username)
-      setCurrentPassword('')
-      setNewPassword('')
-      setShowPasswordForm(false)
-      setEditingAccount(false)
-      setAccountSaved(true)
-      setTimeout(() => setAccountSaved(false), 1800)
+      const created = await createUser(payload)
+      setUsers((prev) => [...prev, created])
+      setShowAddUser(false)
     } catch (err) {
-      setAccountError(err.response?.data?.message || 'Could not save account changes.')
-    } finally {
-      setAccountSaving(false)
+      setUserError(err.response?.data?.message || 'Could not create user.')
     }
   }
 
-  if (profileLoading || accountLoading || !profile) {
+  async function handleEditUser(e) {
+    e.preventDefault()
+    setUserError('')
+    const form = new FormData(e.target)
+    const payload = {
+      username: form.get('username').trim(),
+      role: form.get('role'),
+      enabled: form.get('enabled') === 'on',
+      newPassword: '',
+    }
+    try {
+      const updated = await updateUser(editUserTarget.id, payload)
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)))
+      setEditUserTarget(null)
+    } catch (err) {
+      setUserError(err.response?.data?.message || 'Could not update user.')
+    }
+  }
+
+  async function handleResetPassword(e) {
+    e.preventDefault()
+    setUserError('')
+    const form = new FormData(e.target)
+    const newPassword = form.get('newPassword')
+    const confirmPassword = form.get('confirmPassword')
+    if (newPassword !== confirmPassword) {
+      setUserError('Passwords do not match.')
+      return
+    }
+    try {
+      await updateUser(resetPasswordTarget.id, {
+        username: resetPasswordTarget.username,
+        role: resetPasswordTarget.role,
+        enabled: resetPasswordTarget.enabled,
+        newPassword,
+      })
+      setResetPasswordTarget(null)
+    } catch (err) {
+      setUserError(err.response?.data?.message || 'Could not reset password.')
+    }
+  }
+
+  async function handleToggleEnabled(user) {
+    setUserError('')
+    try {
+      const updated = await updateUser(user.id, {
+        username: user.username,
+        role: user.role,
+        enabled: !user.enabled,
+        newPassword: '',
+      })
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)))
+    } catch (err) {
+      setUserError(err.response?.data?.message || 'Could not update user.')
+    }
+  }
+
+  async function confirmDeleteUser() {
+    setUserError('')
+    try {
+      await deleteUser(deleteUserTarget.id)
+      setUsers((prev) => prev.filter((u) => u.id !== deleteUserTarget.id))
+      setDeleteUserTarget(null)
+    } catch (err) {
+      setUserError(err.response?.data?.message || 'Could not delete user.')
+      setDeleteUserTarget(null)
+    }
+  }
+
+  if (profileLoading || !profile) {
     return (
       <Card className="text-center py-12">
         <p className="text-gray-500">Loading settings…</p>
@@ -158,7 +207,7 @@ export default function Settings() {
 
   return (
     <div>
-      <PageHeader title="Settings" subtitle="Manage clinic profile and your account" />
+      <PageHeader title="Settings" subtitle="Manage clinic profile and users" />
 
       <div className="grid lg:grid-cols-4 gap-6">
         {/* Tab nav */}
@@ -282,117 +331,202 @@ export default function Settings() {
             </Card>
           )}
 
-          {activeTab === 'account' && (
+          {activeTab === 'users' && admin && (
             <Card>
               <div className="flex items-center justify-between mb-1">
                 <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                  <KeyRound size={18} className="text-primary-500" /> Account
+                  <UsersIcon size={18} className="text-primary-500" /> Users
                 </h3>
-                {!editingAccount && (
-                  <Button size="sm" variant="secondary" icon={Pencil} onClick={startEditAccount}>
-                    Edit
-                  </Button>
-                )}
+                <Button size="sm" icon={Plus} onClick={() => setShowAddUser(true)}>
+                  Add User
+                </Button>
               </div>
               <p className="text-xs text-gray-400 mb-5">
-                This application has a single account. The email and password below are the same credentials used to sign in.
+                Manage the Admin and staff accounts that can sign in to this system.
               </p>
 
-              <form onSubmit={handleSaveAccount} className="space-y-4 max-w-md">
-                <FormField label="Email (Username)" required>
-                  <TextInput
-                    type="email"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    disabled={!editingAccount}
-                    className={!editingAccount ? 'opacity-60 cursor-not-allowed' : ''}
-                  />
-                </FormField>
+              {userError && (
+                <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 mb-4">
+                  <AlertCircle size={15} className="shrink-0" />
+                  {userError}
+                </div>
+              )}
 
-                {editingAccount && !showPasswordForm && (
-                  <Button type="button" variant="secondary" icon={KeyRound} onClick={togglePasswordForm}>
-                    Change Password
-                  </Button>
+              <Table columns={['Username', 'Role', 'Status', 'Actions']}>
+                {usersLoading && (
+                  <tr><td colSpan={4} className="py-10 text-center text-sm text-gray-400">Loading users…</td></tr>
                 )}
-                {editingAccount && showPasswordForm && (
-                  <div className="space-y-4 p-4 rounded-xl bg-primary-50/40 border border-primary-100">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-gray-700">Change Password</p>
-                      <button
-                        type="button"
-                        onClick={togglePasswordForm}
-                        className="p-1 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
-                        title="Cancel"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-
-                    <FormField label="Current Password" required hint="Required to confirm the password change">
-                      <div className="relative">
-                        <TextInput
-                          type={showCurrentPassword ? 'text' : 'password'}
-                          required
-                          value={currentPassword}
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                          placeholder="Enter your current password"
-                          className="pr-9"
-                        />
+                {!usersLoading && users.length === 0 && (
+                  <tr><td colSpan={4} className="py-10 text-center text-sm text-gray-400">No users found.</td></tr>
+                )}
+                {users.map((u) => (
+                  <tr key={u.id} className="hover:bg-primary-50/40 transition">
+                    <td className="py-3 px-3 pl-0 font-semibold text-gray-800">{u.username}</td>
+                    <td className="py-3 px-3">
+                      <span className="flex items-center gap-1.5 text-sm text-gray-600">
+                        {u.role === 'ADMIN' ? <ShieldCheck size={14} className="text-primary-500" /> : <UserIcon size={14} className="text-gray-400" />}
+                        {u.role === 'ADMIN' ? 'Admin' : 'User'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <Badge color={u.enabled ? 'green' : 'gray'}>{u.enabled ? 'Enabled' : 'Disabled'}</Badge>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-1">
                         <button
-                          type="button"
-                          onClick={() => setShowCurrentPassword((v) => !v)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          onClick={() => setEditUserTarget(u)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:bg-primary-100 hover:text-primary-600 transition"
+                          title="Edit"
                         >
-                          {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => setResetPasswordTarget(u)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:bg-primary-100 hover:text-primary-600 transition"
+                          title="Reset Password"
+                        >
+                          <KeyRound size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleToggleEnabled(u)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:bg-primary-100 hover:text-primary-600 transition"
+                          title={u.enabled ? 'Disable account' : 'Enable account'}
+                        >
+                          {u.enabled ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
+                        </button>
+                        <button
+                          onClick={() => setDeleteUserTarget(u)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:bg-rose-100 hover:text-rose-600 transition"
+                          title="Delete"
+                        >
+                          <Trash2 size={15} />
                         </button>
                       </div>
-                    </FormField>
-
-                    <FormField label="New Password" required hint="Enter the new password">
-                      <div className="relative">
-                        <TextInput
-                          type={showNewPassword ? 'text' : 'password'}
-                          required
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="pr-9"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNewPassword((v) => !v)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </FormField>
-                  </div>
-                )}
-
-                {accountError && (
-                  <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
-                    <AlertCircle size={15} className="shrink-0" />
-                    {accountError}
-                  </div>
-                )}
-
-                {editingAccount && (
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={cancelEditAccount} disabled={accountSaving}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" icon={accountSaved ? Check : Save} disabled={accountSaving}>
-                      {accountSaving ? 'Saving…' : accountSaved ? 'Saved!' : 'Save Changes'}
-                    </Button>
-                  </div>
-                )}
-              </form>
+                    </td>
+                  </tr>
+                ))}
+              </Table>
             </Card>
           )}
         </div>
       </div>
+
+      {/* Add User */}
+      <Modal
+        open={showAddUser}
+        onClose={() => { setShowAddUser(false); setUserError('') }}
+        title="Add User"
+      >
+        <form onSubmit={handleAddUser} className="space-y-4">
+          <FormField label="Username (Email)" required>
+            <TextInput name="username" type="email" required placeholder="e.g. staff3@devsclinic.in" />
+          </FormField>
+          <FormField label="Password" required hint="At least 6 characters">
+            <TextInput name="password" type="password" required minLength={6} placeholder="••••••••" />
+          </FormField>
+          <FormField label="Role" required>
+            <Select name="role" required defaultValue="USER">
+              <option value="USER">User</option>
+              <option value="ADMIN">Admin</option>
+            </Select>
+          </FormField>
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input type="checkbox" name="enabled" defaultChecked className="rounded border-gray-300 text-primary-500 focus:ring-primary-200" />
+            Account enabled
+          </label>
+          {userError && (
+            <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+              <AlertCircle size={15} className="shrink-0" /> {userError}
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => { setShowAddUser(false); setUserError('') }}>Cancel</Button>
+            <Button type="submit">Add User</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit User */}
+      <Modal
+        open={!!editUserTarget}
+        onClose={() => { setEditUserTarget(null); setUserError('') }}
+        title="Edit User"
+      >
+        {editUserTarget && (
+          <form onSubmit={handleEditUser} className="space-y-4">
+            <FormField label="Username (Email)" required>
+              <TextInput name="username" type="email" required defaultValue={editUserTarget.username} />
+            </FormField>
+            <FormField label="Role" required>
+              <Select name="role" required defaultValue={editUserTarget.role}>
+                <option value="USER">User</option>
+                <option value="ADMIN">Admin</option>
+              </Select>
+            </FormField>
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input type="checkbox" name="enabled" defaultChecked={editUserTarget.enabled} className="rounded border-gray-300 text-primary-500 focus:ring-primary-200" />
+              Account enabled
+            </label>
+            {userError && (
+              <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+                <AlertCircle size={15} className="shrink-0" /> {userError}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => { setEditUserTarget(null); setUserError('') }}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Reset Password */}
+      <Modal
+        open={!!resetPasswordTarget}
+        onClose={() => { setResetPasswordTarget(null); setUserError('') }}
+        title="Reset Password"
+      >
+        {resetPasswordTarget && (
+          <form onSubmit={handleResetPassword} className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Set a new password for <span className="font-semibold text-gray-800">{resetPasswordTarget.username}</span>.
+            </p>
+            <FormField label="New Password" required hint="At least 6 characters">
+              <TextInput name="newPassword" type="password" required minLength={6} placeholder="••••••••" />
+            </FormField>
+            <FormField label="Confirm New Password" required>
+              <TextInput name="confirmPassword" type="password" required minLength={6} placeholder="••••••••" />
+            </FormField>
+            {userError && (
+              <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+                <AlertCircle size={15} className="shrink-0" /> {userError}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => { setResetPasswordTarget(null); setUserError('') }}>Cancel</Button>
+              <Button type="submit">Reset Password</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Delete User */}
+      <Modal
+        open={!!deleteUserTarget}
+        onClose={() => setDeleteUserTarget(null)}
+        title="Delete User"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleteUserTarget(null)}>Cancel</Button>
+            <Button variant="danger" onClick={confirmDeleteUser}>Delete</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-600">
+          Are you sure you want to delete <span className="font-semibold">{deleteUserTarget?.username}</span>?
+          This action cannot be undone.
+        </p>
+      </Modal>
     </div>
   )
 }
