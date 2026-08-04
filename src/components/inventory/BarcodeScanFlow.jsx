@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import { Camera, Keyboard, Check, AlertCircle, ArrowLeft } from 'lucide-react'
+import { Camera, Keyboard, Check, AlertCircle, ArrowLeft, Usb } from 'lucide-react'
 import Modal from '../common/Modal.jsx'
 import Button from '../common/Button.jsx'
-import { FormField, TextInput } from '../common/FormField.jsx'
+import { FormField, TextInput, Select } from '../common/FormField.jsx'
 import { updateInventoryItem } from '../../api/inventory.js'
 
 const BARCODE_FORMATS_MODULE = () => import('html5-qrcode')
 
 /**
- * Barcode → stock workflow: scan (camera or USB/manual) → look the code up in the
- * already-loaded inventory list → known item gets a quantity prompt that adds to its
- * stock, unknown codes are handed back to the parent via onNotFound so it can open the
- * Add Medicine form pre-filled with the scanned code.
+ * Barcode → stock workflow: scan (webcam, a USB-connected camera/phone, a USB barcode
+ * scanner acting as a keyboard, or manual entry) → look the code up in the already-loaded
+ * inventory list → known item gets a quantity prompt that adds to its stock, unknown codes
+ * are handed back to the parent via onNotFound so it can open the Add Medicine form
+ * pre-filled with the scanned code.
  */
 export default function BarcodeScanFlow({ open, onClose, inventory, onStockUpdated, onNotFound }) {
   const [mode, setMode] = useState('camera')
@@ -19,6 +20,8 @@ export default function BarcodeScanFlow({ open, onClose, inventory, onStockUpdat
   const [scanCount, setScanCount] = useState(0)
   const [manualValue, setManualValue] = useState('')
   const [cameraError, setCameraError] = useState('')
+  const [cameras, setCameras] = useState([])
+  const [selectedCameraId, setSelectedCameraId] = useState(null)
   const [matchedItem, setMatchedItem] = useState(null)
   const [quantity, setQuantity] = useState(1)
   const [saving, setSaving] = useState(false)
@@ -27,6 +30,8 @@ export default function BarcodeScanFlow({ open, onClose, inventory, onStockUpdat
 
   const scannerRef = useRef(null)
   const handledRef = useRef(false)
+  const usbBufferRef = useRef('')
+  const usbBufferTimeoutRef = useRef(null)
 
   useEffect(() => {
     if (open && mode === 'camera' && step === 'scan') {
@@ -38,15 +43,75 @@ export default function BarcodeScanFlow({ open, onClose, inventory, onStockUpdat
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, step, scanCount])
 
-  async function startCamera() {
+  // A USB barcode scanner behaves like a keyboard: it types the barcode's characters very
+  // fast and finishes with Enter. This listens globally — regardless of whether the Camera
+  // or Manual tab is active — so a scan is picked up the moment it happens. It steps aside
+  // whenever the keystrokes are going into a real form field (the manual-entry input),
+  // which already has its own identical Enter-to-submit handling.
+  useEffect(() => {
+    if (!open || step !== 'scan') return
+
+    function handleGlobalKeyDown(e) {
+      const tag = e.target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (e.ctrlKey || e.altKey || e.metaKey) return
+
+      if (e.key === 'Enter') {
+        if (usbBufferRef.current.length > 0) {
+          e.preventDefault()
+          const code = usbBufferRef.current
+          usbBufferRef.current = ''
+          handleDetected(code)
+        }
+        return
+      }
+
+      if (e.key.length === 1) {
+        usbBufferRef.current += e.key
+        clearTimeout(usbBufferTimeoutRef.current)
+        usbBufferTimeoutRef.current = setTimeout(() => {
+          usbBufferRef.current = ''
+        }, 300)
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown)
+      clearTimeout(usbBufferTimeoutRef.current)
+      usbBufferRef.current = ''
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, step, scanCount])
+
+  async function startCamera(overrideCameraId) {
     if (scannerRef.current) return
     setCameraError('')
     try {
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await BARCODE_FORMATS_MODULE()
+
+      let cameraList = cameras
+      let cameraId = overrideCameraId ?? selectedCameraId
+      if (cameraList.length === 0) {
+        try {
+          cameraList = (await Html5Qrcode.getCameras()) || []
+          setCameras(cameraList)
+          if (cameraList.length > 0 && !cameraId) {
+            const preferred =
+              cameraList.find((d) => /back|rear|environment/i.test(d.label || '')) || cameraList[0]
+            cameraId = preferred.id
+            setSelectedCameraId(cameraId)
+          }
+        } catch {
+          cameraList = []
+        }
+      }
+
       const scanner = new Html5Qrcode('barcode-scan-region')
       scannerRef.current = scanner
+      const target = cameraId || { facingMode: 'environment' }
       await scanner.start(
-        { facingMode: 'environment' },
+        target,
         {
           fps: 10,
           qrbox: { width: 260, height: 140 },
@@ -82,6 +147,13 @@ export default function BarcodeScanFlow({ open, onClose, inventory, onStockUpdat
         // already stopped
       }
     }
+  }
+
+  async function handleCameraChange(e) {
+    const newId = e.target.value
+    setSelectedCameraId(newId)
+    await stopCamera()
+    startCamera(newId)
   }
 
   function handleDetected(rawCode) {
@@ -130,6 +202,8 @@ export default function BarcodeScanFlow({ open, onClose, inventory, onStockUpdat
     setCameraError('')
     setError('')
     setSuccessInfo(null)
+    setCameras([])
+    setSelectedCameraId(null)
     onClose()
   }
 
@@ -165,7 +239,7 @@ export default function BarcodeScanFlow({ open, onClose, inventory, onStockUpdat
     <Modal open={open} onClose={handleClose} title={titles[step]}>
       {step === 'scan' && (
         <div>
-          <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="grid grid-cols-2 gap-2 mb-3">
             <button
               type="button"
               onClick={() => setMode('camera')}
@@ -186,14 +260,31 @@ export default function BarcodeScanFlow({ open, onClose, inventory, onStockUpdat
                   : 'bg-white text-gray-600 border-gray-200 hover:border-primary-300'
               }`}
             >
-              <Keyboard size={15} /> USB Scanner / Manual
+              <Keyboard size={15} /> Manual Entry
             </button>
           </div>
 
+          <p className="flex items-center gap-1.5 text-xs text-gray-400 mb-4">
+            <Usb size={13} className="shrink-0" />
+            A USB barcode scanner works automatically from either tab — just scan.
+          </p>
+
           {mode === 'camera' && (
             <div>
+              {cameras.length > 1 && (
+                <FormField label="Camera" className="mb-3">
+                  <Select value={selectedCameraId || ''} onChange={handleCameraChange}>
+                    {cameras.map((c) => (
+                      <option key={c.id} value={c.id}>{c.label || c.id}</option>
+                    ))}
+                  </Select>
+                </FormField>
+              )}
               <div id="barcode-scan-region" className="rounded-xl overflow-hidden bg-gray-900 min-h-[220px]" />
-              <p className="text-xs text-gray-400 mt-2 text-center">Point the camera at the medicine's barcode.</p>
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                Point the camera at the medicine's barcode. Works with a built-in webcam or a
+                USB-connected camera / phone.
+              </p>
               {cameraError && (
                 <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 mt-3">
                   <AlertCircle size={15} className="shrink-0" /> {cameraError}

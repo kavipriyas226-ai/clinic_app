@@ -245,7 +245,7 @@ export default function InventoryMedicines() {
               <TextInput name="stock" type="number" min="0" required placeholder="0" />
             </FormField>
             <FormField label="Low Stock Threshold" required>
-              <TextInput name="threshold" type="number" min="0" required placeholder="0" />
+              <TextInput name="threshold" type="number" min="0" required defaultValue={5} />
             </FormField>
             <FormField label="Expiry Date" required>
               <TextInput name="expiry" type="date" required />

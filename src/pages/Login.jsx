@@ -49,9 +49,9 @@ export default function Login() {
             <img
               src={clinicProfile?.logoDataUrl || logo}
               alt={clinicProfile?.name || 'Devs Hair & Skin Clinic'}
-              width={72}
-              height={72}
-              className="w-[72px] h-[72px] rounded-xl object-contain bg-white mb-6"
+              width={112}
+              height={112}
+              className="w-28 h-28 rounded-xl object-contain bg-white mb-6 mx-auto block"
             />
             <h2 className="text-3xl font-extrabold leading-tight">{clinicProfile?.name || 'Devs Hair & Skin Clinic'}</h2>
             <p className="text-primary-100 mt-2 text-sm">{clinicProfile?.tagline}</p>
