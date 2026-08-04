@@ -12,6 +12,7 @@ import { FormField, TextInput, Select } from '../components/common/FormField.jsx
 import InventoryTabs from '../components/inventory/InventoryTabs.jsx'
 import BarcodeScanFlow from '../components/inventory/BarcodeScanFlow.jsx'
 import { getInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem } from '../api/inventory.js'
+import { getStockStatus, isExpiringSoon } from '../utils/inventory.js'
 
 export default function InventoryMedicines() {
   const location = useLocation()
@@ -21,8 +22,8 @@ export default function InventoryMedicines() {
   const [inventory, setInventory] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('All')
-  const [stockStatus, setStockStatus] = useState('All')
+  const [category, setCategory] = useState(location.state?.initialCategoryFilter || 'All')
+  const [stockStatus, setStockStatus] = useState(location.state?.initialStockFilter || 'All')
   const [showAdd, setShowAdd] = useState(false)
   const [addBarcodePrefill, setAddBarcodePrefill] = useState('')
   const [showScan, setShowScan] = useState(false)
@@ -70,17 +71,10 @@ export default function InventoryMedicines() {
     return inventory.filter((i) => {
       const matchesQuery = i.name.toLowerCase().includes(query.toLowerCase()) || i.id.toLowerCase().includes(query.toLowerCase())
       const matchesCategory = category === 'All' || i.category === category
-      const low = i.stock <= i.threshold
-      const matchesStockStatus =
-        stockStatus === 'All' || (stockStatus === 'Low Stock' ? low : !low)
+      const matchesStockStatus = stockStatus === 'All' || getStockStatus(i) === stockStatus
       return matchesQuery && matchesCategory && matchesStockStatus
     })
   }, [inventory, query, category, stockStatus])
-
-  function isExpiringSoon(expiry) {
-    const diff = (new Date(expiry) - new Date('2026-07-28')) / (1000 * 60 * 60 * 24)
-    return diff <= 60
-  }
 
   async function handleAdd(e) {
     e.preventDefault()
@@ -152,6 +146,7 @@ export default function InventoryMedicines() {
               <option value="All">All</option>
               <option value="In Stock">In Stock</option>
               <option value="Low Stock">Low Stock</option>
+              <option value="Out of Stock">Out of Stock</option>
             </Select>
           </div>
         </div>
@@ -164,7 +159,7 @@ export default function InventoryMedicines() {
             <tr><td colSpan={8} className="py-10 text-center text-sm text-gray-400">No medicines found.</td></tr>
           )}
           {filtered.map((item) => {
-            const low = item.stock <= item.threshold
+            const status = getStockStatus(item)
             const expiring = isExpiringSoon(item.expiry)
             return (
               <tr key={item.id} className="hover:bg-primary-50/40 transition">
@@ -183,7 +178,9 @@ export default function InventoryMedicines() {
                 </td>
                 <td className="py-3 px-3 text-gray-600">{item.supplier}</td>
                 <td className="py-3 px-3">
-                  {low ? <Badge color="red">Low Stock</Badge> : <Badge color="green">In Stock</Badge>}
+                  <Badge color={status === 'Out of Stock' ? 'red' : status === 'Low Stock' ? 'yellow' : 'green'}>
+                    {status}
+                  </Badge>
                 </td>
                 <td className="py-3 px-3">
                   <div className="flex items-center gap-1">
@@ -287,10 +284,7 @@ export default function InventoryMedicines() {
             <DetailRow label="Stock" value={`${viewTarget.stock} units (threshold ${viewTarget.threshold})`} />
             <DetailRow label="Expiry Date" value={viewTarget.expiry} />
             <DetailRow label="Supplier" value={viewTarget.supplier} />
-            <DetailRow
-              label="Status"
-              value={viewTarget.stock <= viewTarget.threshold ? 'Low Stock' : 'In Stock'}
-            />
+            <DetailRow label="Status" value={getStockStatus(viewTarget)} />
           </div>
         )}
       </Modal>

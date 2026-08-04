@@ -42,21 +42,21 @@ export default function Login() {
     <div className="min-h-screen bg-bg flex items-center justify-center p-4">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-card overflow-hidden grid md:grid-cols-2">
         {/* Brand panel */}
-        <div className="hidden md:flex flex-col justify-between bg-primary-500 p-10 text-white relative overflow-hidden">
+        <div className="hidden md:flex flex-col bg-primary-500 p-10 text-white relative overflow-hidden">
           <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10" />
           <div className="absolute bottom-0 -left-10 w-40 h-40 rounded-full bg-white/10" />
-          <div className="relative z-10">
+          <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center">
             <img
               src={clinicProfile?.logoDataUrl || logo}
               alt={clinicProfile?.name || 'Devs Hair & Skin Clinic'}
-              width={112}
-              height={112}
-              className="w-28 h-28 rounded-xl object-contain bg-white mb-6 mx-auto block"
+              width={128}
+              height={128}
+              className="w-32 h-32 rounded-2xl object-contain bg-white block"
             />
-            <h2 className="text-3xl font-extrabold leading-tight">{clinicProfile?.name || 'Devs Hair & Skin Clinic'}</h2>
+            <h2 className="text-3xl font-extrabold leading-tight mt-6">{clinicProfile?.name || 'Devs Hair & Skin Clinic'}</h2>
             <p className="text-primary-100 mt-2 text-sm">{clinicProfile?.tagline}</p>
           </div>
-          <div className="relative z-10 flex items-center gap-2 text-primary-100 text-xs">
+          <div className="relative z-10 flex items-center justify-center gap-2 text-primary-100 text-xs">
             <Sparkles size={14} />
             <span>Manage patients, billing & inventory in one place</span>
           </div>
@@ -91,7 +91,7 @@ export default function Login() {
                       : 'bg-white text-gray-600 border-gray-200 hover:border-primary-300'
                   }`}
                 >
-                  <User size={15} /> User Login
+                  <User size={15} /> Staff Login
                 </button>
               </div>
             </div>

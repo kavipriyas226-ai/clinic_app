@@ -3,24 +3,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, deleteNotification } from '../../api/notifications.js'
 import { logout } from '../../api/auth.js'
-
-const currentUser = { name: 'Devsclinic', avatarInitials: 'DC' }
+import { isAdmin } from '../../api/client.js'
+import { timeAgo } from '../../utils/time.js'
 
 const POLL_INTERVAL_MS = 8000
 
-function timeAgo(isoString) {
-  if (!isoString) return ''
-  const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
-  if (seconds < 60) return 'Just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
-
 export default function Navbar({ onMenuClick }) {
+  const admin = isAdmin()
+  const currentUser = admin ? { name: 'Admin', avatarInitials: 'AD' } : { name: 'Staff', avatarInitials: 'ST' }
   const [profileOpen, setProfileOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState([])

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import Card from './Card.jsx'
 
-export default function StatCard({ label, value, change, trend, icon: Icon, to }) {
+export default function StatCard({ label, value, change, trend, icon: Icon, to, state }) {
   const isUp = trend === 'up'
   const content = (
     <Card
@@ -33,5 +33,5 @@ export default function StatCard({ label, value, change, trend, icon: Icon, to }
     </Card>
   )
 
-  return to ? <Link to={to} className="block">{content}</Link> : content
+  return to ? <Link to={to} state={state} className="block">{content}</Link> : content
 }

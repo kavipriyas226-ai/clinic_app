@@ -18,3 +18,8 @@ export async function updateInventoryItem(id, payload) {
 export async function deleteInventoryItem(id) {
   await client.delete(`/inventory/${id}`)
 }
+
+export async function getInventoryActivities(limit = 20) {
+  const { data } = await client.get(`/inventory/activities?limit=${limit}`)
+  return data
+}

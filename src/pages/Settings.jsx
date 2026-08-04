@@ -365,7 +365,7 @@ export default function Settings() {
                     <td className="py-3 px-3">
                       <span className="flex items-center gap-1.5 text-sm text-gray-600">
                         {u.role === 'ADMIN' ? <ShieldCheck size={14} className="text-primary-500" /> : <UserIcon size={14} className="text-gray-400" />}
-                        {u.role === 'ADMIN' ? 'Admin' : 'User'}
+                        {u.role === 'ADMIN' ? 'Admin' : 'Staff'}
                       </span>
                     </td>
                     <td className="py-3 px-3">
@@ -426,7 +426,7 @@ export default function Settings() {
           </FormField>
           <FormField label="Role" required>
             <Select name="role" required defaultValue="USER">
-              <option value="USER">User</option>
+              <option value="USER">Staff</option>
               <option value="ADMIN">Admin</option>
             </Select>
           </FormField>
@@ -459,7 +459,7 @@ export default function Settings() {
             </FormField>
             <FormField label="Role" required>
               <Select name="role" required defaultValue={editUserTarget.role}>
-                <option value="USER">User</option>
+                <option value="USER">Staff</option>
                 <option value="ADMIN">Admin</option>
               </Select>
             </FormField>
