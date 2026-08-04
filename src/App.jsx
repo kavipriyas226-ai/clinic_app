@@ -8,6 +8,8 @@ import PatientDetails from './pages/PatientDetails.jsx'
 import Billing from './pages/Billing.jsx'
 import Payments from './pages/Payments.jsx'
 import Inventory from './pages/Inventory.jsx'
+import InventoryMedicines from './pages/InventoryMedicines.jsx'
+import InventoryTreatments from './pages/InventoryTreatments.jsx'
 import Pharmacy from './pages/Pharmacy.jsx'
 import Reports from './pages/Reports.jsx'
 import Settings from './pages/Settings.jsx'
@@ -34,6 +36,8 @@ export default function App() {
           <Route path="/billing" element={<Billing />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/inventory/medicines" element={<InventoryMedicines />} />
+          <Route path="/inventory/treatments" element={<InventoryTreatments />} />
           <Route path="/pharmacy" element={<Pharmacy />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />

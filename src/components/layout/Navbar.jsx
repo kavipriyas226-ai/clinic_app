@@ -75,7 +75,7 @@ export default function Navbar({ onMenuClick }) {
       }
     }
     if (notification.type === 'LOW_STOCK' && notification.itemId) {
-      navigate('/inventory', { state: { editItemId: notification.itemId } })
+      navigate('/inventory/medicines', { state: { editItemId: notification.itemId } })
     }
   }
 

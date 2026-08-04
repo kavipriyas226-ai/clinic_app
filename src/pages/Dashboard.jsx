@@ -23,7 +23,7 @@ import { getRevenueReport } from '../api/reports.js'
 const quickActions = [
   { label: 'Register Patient', to: '/patients/register', icon: UserPlus },
   { label: 'Create Invoice', to: '/billing', icon: Receipt },
-  { label: 'Add Medicine', to: '/inventory', icon: PackagePlus },
+  { label: 'Add Medicine', to: '/inventory/medicines', icon: PackagePlus },
   { label: 'View Reports', to: '/reports', icon: BarChart3 },
 ]
 
@@ -62,7 +62,7 @@ export default function Dashboard() {
     { label: 'Total Patients', value: stats.totalPatients.toLocaleString('en-IN'), change: '', trend: 'up', to: '/patients' },
     { label: "Today's Patients", value: String(stats.todaysPatients), change: '', trend: 'up', to: '/patients' },
     { label: 'Monthly Revenue', value: `₹${stats.monthlyRevenue.toLocaleString('en-IN')}`, change: '', trend: 'up', to: '/reports' },
-    { label: 'Low Stock Items', value: String(stats.lowStockItems), change: '', trend: 'down', to: '/inventory' },
+    { label: 'Low Stock Items', value: String(stats.lowStockItems), change: '', trend: 'down', to: '/inventory/medicines' },
   ]
   const statIcons = [Users, UserCheck, IndianRupee, PackageX]
   const maxRevenue = Math.max(1, ...revenueChart.map((d) => d.value))
@@ -167,7 +167,7 @@ export default function Dashboard() {
         <Card>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-gray-800">Low Stock Alerts</h3>
-            <Link to="/inventory" className="text-xs font-semibold text-primary-600 hover:underline">
+            <Link to="/inventory/medicines" className="text-xs font-semibold text-primary-600 hover:underline">
               View all
             </Link>
           </div>
