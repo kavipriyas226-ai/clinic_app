@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PackagePlus, Stethoscope, AlertTriangle, ArrowRight } from 'lucide-react'
+import { PackagePlus, ScanBarcode, Stethoscope, AlertTriangle, ArrowRight } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
+import Button from '../components/common/Button.jsx'
 import InventoryTabs from '../components/inventory/InventoryTabs.jsx'
 import { getInventory } from '../api/inventory.js'
 import { getTreatmentOptions } from '../api/treatments.js'
@@ -26,7 +27,18 @@ export default function Inventory() {
 
   return (
     <div>
-      <PageHeader title="Inventory" subtitle="Manage medicines and treatments offered at your clinic" />
+      <PageHeader
+        title="Inventory"
+        subtitle="Manage medicines and treatments offered at your clinic"
+        actions={
+          <Button
+            icon={ScanBarcode}
+            onClick={() => navigate('/inventory/medicines', { state: { autoOpenScan: true } })}
+          >
+            Scan Barcode
+          </Button>
+        }
+      />
 
       <InventoryTabs />
 

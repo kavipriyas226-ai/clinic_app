@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { PackagePlus, Filter, AlertTriangle, Eye, Pencil, Trash2 } from 'lucide-react'
+import { PackagePlus, ScanBarcode, Filter, AlertTriangle, Eye, Pencil, Trash2 } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import SearchInput from '../components/common/SearchInput.jsx'
@@ -10,6 +10,7 @@ import Button from '../components/common/Button.jsx'
 import Modal from '../components/common/Modal.jsx'
 import { FormField, TextInput, Select } from '../components/common/FormField.jsx'
 import InventoryTabs from '../components/inventory/InventoryTabs.jsx'
+import BarcodeScanFlow from '../components/inventory/BarcodeScanFlow.jsx'
 import { getInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem } from '../api/inventory.js'
 
 export default function InventoryMedicines() {
@@ -23,11 +24,14 @@ export default function InventoryMedicines() {
   const [category, setCategory] = useState('All')
   const [stockStatus, setStockStatus] = useState('All')
   const [showAdd, setShowAdd] = useState(false)
+  const [addBarcodePrefill, setAddBarcodePrefill] = useState('')
+  const [showScan, setShowScan] = useState(false)
   const [viewTarget, setViewTarget] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
 
   const autoEditHandled = useRef(false)
+  const autoScanHandled = useRef(false)
 
   useEffect(() => {
     getInventory()
@@ -50,6 +54,15 @@ export default function InventoryMedicines() {
       navigate(location.pathname, { replace: true, state: {} })
     }
   }, [editItemId, inventory, location.pathname, navigate])
+
+  // Arrived here from the Inventory Dashboard's "Scan Barcode" button — open the scan
+  // modal directly, exactly once, then strip the flag from history state.
+  useEffect(() => {
+    if (!location.state?.autoOpenScan || autoScanHandled.current) return
+    setShowScan(true)
+    autoScanHandled.current = true
+    navigate(location.pathname, { replace: true, state: {} })
+  }, [location.state, location.pathname, navigate])
 
   const categories = ['All', ...new Set(inventory.map((i) => i.category))]
 
@@ -80,10 +93,12 @@ export default function InventoryMedicines() {
       threshold: Number(form.get('threshold')),
       expiry: form.get('expiry'),
       supplier: form.get('supplier'),
+      barcode: form.get('barcode') || null,
     }
     const created = await createInventoryItem(payload)
     setInventory((prev) => [created, ...prev])
     setShowAdd(false)
+    setAddBarcodePrefill('')
   }
 
   async function handleEdit(e) {
@@ -97,6 +112,7 @@ export default function InventoryMedicines() {
       threshold: Number(form.get('threshold')),
       expiry: form.get('expiry'),
       supplier: form.get('supplier'),
+      barcode: form.get('barcode') || null,
     }
     const updated = await updateInventoryItem(editTarget.id, payload)
     setInventory((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
@@ -114,7 +130,12 @@ export default function InventoryMedicines() {
       <PageHeader
         title="Medicines"
         subtitle={`${filtered.length} item${filtered.length !== 1 ? 's' : ''} in stock`}
-        actions={<Button icon={PackagePlus} onClick={() => setShowAdd(true)}>Add Medicine</Button>}
+        actions={
+          <>
+            <Button variant="secondary" icon={ScanBarcode} onClick={() => setShowScan(true)}>Scan Barcode</Button>
+            <Button icon={PackagePlus} onClick={() => setShowAdd(true)}>Add Medicine</Button>
+          </>
+        }
       />
 
       <InventoryTabs />
@@ -197,12 +218,15 @@ export default function InventoryMedicines() {
 
       <Modal
         open={showAdd}
-        onClose={() => setShowAdd(false)}
+        onClose={() => { setShowAdd(false); setAddBarcodePrefill('') }}
         title="Add Medicine"
       >
         <form onSubmit={handleAdd} className="space-y-4">
           <FormField label="Medicine Name" required>
             <TextInput name="name" required placeholder="e.g. Adapalene 0.1% Gel" />
+          </FormField>
+          <FormField label="Barcode" hint="Optional — auto-filled when added via barcode scan">
+            <TextInput name="barcode" defaultValue={addBarcodePrefill} placeholder="e.g. 8901030826829" />
           </FormField>
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Category" required>
@@ -231,11 +255,22 @@ export default function InventoryMedicines() {
             <TextInput name="supplier" required placeholder="e.g. One Clinical Skincare Distributors" />
           </FormField>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => { setShowAdd(false); setAddBarcodePrefill('') }}>Cancel</Button>
             <Button type="submit">Add Medicine</Button>
           </div>
         </form>
       </Modal>
+
+      <BarcodeScanFlow
+        open={showScan}
+        onClose={() => setShowScan(false)}
+        inventory={inventory}
+        onStockUpdated={(updated) => setInventory((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
+        onNotFound={(code) => {
+          setAddBarcodePrefill(code)
+          setShowAdd(true)
+        }}
+      />
 
       <Modal
         open={!!viewTarget}
@@ -246,6 +281,7 @@ export default function InventoryMedicines() {
           <div className="space-y-3 text-sm">
             <DetailRow label="Medicine Name" value={viewTarget.name} />
             <DetailRow label="Medicine ID" value={viewTarget.id} />
+            {viewTarget.barcode && <DetailRow label="Barcode" value={viewTarget.barcode} />}
             <DetailRow label="Category" value={viewTarget.category} />
             <DetailRow label="Price" value={`₹${viewTarget.price.toLocaleString('en-IN')}`} />
             <DetailRow label="Stock" value={`${viewTarget.stock} units (threshold ${viewTarget.threshold})`} />
@@ -268,6 +304,9 @@ export default function InventoryMedicines() {
           <form onSubmit={handleEdit} className="space-y-4">
             <FormField label="Medicine Name" required>
               <TextInput name="name" required defaultValue={editTarget.name} />
+            </FormField>
+            <FormField label="Barcode" hint="Optional">
+              <TextInput name="barcode" defaultValue={editTarget.barcode || ''} placeholder="e.g. 8901030826829" />
             </FormField>
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Category" required>
