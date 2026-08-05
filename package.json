@@ -3,10 +3,13 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron": "electron .",
+    "electron:pack": "npm run build && electron-builder --dir && node scripts/fix-icon.mjs && electron-builder --prepackaged release/win-unpacked"
   },
   "dependencies": {
     "axios": "^1.18.1",
@@ -19,8 +22,34 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.19",
+    "electron": "^31.0.2",
+    "electron-builder": "^24.13.3",
     "postcss": "^8.4.38",
+    "rcedit": "^5.0.2",
     "tailwindcss": "^3.4.4",
     "vite": "^5.2.0"
+  },
+  "build": {
+    "appId": "com.devsclinic.desktop",
+    "productName": "Devs Hair & Skin Clinic",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "icon": "electron/icon.ico",
+      "target": [
+        "nsis"
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
   }
 }
