@@ -14,6 +14,9 @@ const statusMap = {
   Unpaid: 'red',
   'Low Stock': 'red',
   'In Stock': 'green',
+  Pending: 'red',
+  'Partially Paid': 'yellow',
+  'Fully Paid': 'green',
 }
 
 export default function Badge({ children, color }) {

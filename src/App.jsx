@@ -7,6 +7,7 @@ import RegisterPatient from './pages/RegisterPatient.jsx'
 import PatientDetails from './pages/PatientDetails.jsx'
 import Billing from './pages/Billing.jsx'
 import Payments from './pages/Payments.jsx'
+import PaymentPatientDetails from './pages/PaymentPatientDetails.jsx'
 import Inventory from './pages/Inventory.jsx'
 import InventoryMedicines from './pages/InventoryMedicines.jsx'
 import InventoryTreatments from './pages/InventoryTreatments.jsx'
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/patients/:id" element={<PatientDetails />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/payments" element={<Payments />} />
+          <Route path="/payments/patient/:patientId" element={<PaymentPatientDetails />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/inventory/medicines" element={<InventoryMedicines />} />
           <Route path="/inventory/treatments" element={<InventoryTreatments />} />

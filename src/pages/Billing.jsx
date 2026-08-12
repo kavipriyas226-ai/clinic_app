@@ -50,6 +50,9 @@ export default function Billing() {
   const [discountEnabled, setDiscountEnabled] = useState(false)
   const [discount, setDiscount] = useState(0)
   const [gstEnabled, setGstEnabled] = useState(false)
+  const [initialPaymentAmount, setInitialPaymentAmount] = useState(0)
+  const [initialPaymentTouched, setInitialPaymentTouched] = useState(false)
+  const [initialPaymentMethod, setInitialPaymentMethod] = useState('UPI')
   const [itemSearch, setItemSearch] = useState({ idx: null, query: '' })
   const [error, setError] = useState('')
   const [printing, setPrinting] = useState(false)
@@ -141,10 +144,18 @@ export default function Billing() {
   const gstAmount = gstEnabled ? taxable * GST_RATE : 0
   const total = taxable + gstAmount
 
+  useEffect(() => {
+    if (!initialPaymentTouched) setInitialPaymentAmount(total)
+  }, [total, initialPaymentTouched])
+
   async function handlePrintInvoice() {
     setError('')
     if (!patientId || lineItems.length === 0) {
       setError('Select a patient and add at least one line item before printing.')
+      return
+    }
+    if (initialPaymentAmount < 0 || initialPaymentAmount > total) {
+      setError(`Amount received now cannot exceed the invoice total of ₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}.`)
       return
     }
     setPrinting(true)
@@ -162,6 +173,8 @@ export default function Billing() {
         discountEnabled,
         discountPercent: discount,
         gstEnabled,
+        initialPaymentAmount: Number(initialPaymentAmount) || 0,
+        initialPaymentMethod,
       })
       setSavedInvoice(invoice)
       setPrintedAt(new Date())
@@ -382,6 +395,39 @@ export default function Billing() {
                 />
               </button>
             </div>
+          </Card>
+
+          <Card>
+            <h3 className="font-bold text-gray-800 mb-1">Payment Received (This Visit)</h3>
+            <p className="text-xs text-gray-400 mb-4">
+              Defaults to the full invoice total. Lower it to start an installment plan — the remaining balance can be collected on later visits from the Payments module.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Amount Received Now">
+                <TextInput
+                  type="number"
+                  min="0"
+                  max={total}
+                  value={initialPaymentAmount}
+                  onChange={(e) => {
+                    setInitialPaymentTouched(true)
+                    setInitialPaymentAmount(e.target.value === '' ? '' : Number(e.target.value))
+                  }}
+                />
+              </FormField>
+              <FormField label="Payment Method">
+                <Select value={initialPaymentMethod} onChange={(e) => setInitialPaymentMethod(e.target.value)}>
+                  <option>UPI</option>
+                  <option>Card</option>
+                  <option>Cash</option>
+                </Select>
+              </FormField>
+            </div>
+            {Number(initialPaymentAmount) < total && (
+              <p className="text-xs text-amber-600 mt-2">
+                Balance of ₹{(total - (Number(initialPaymentAmount) || 0)).toLocaleString('en-IN', { maximumFractionDigits: 0 })} will remain pending after this visit.
+              </p>
+            )}
           </Card>
         </div>
 

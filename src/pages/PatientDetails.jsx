@@ -232,6 +232,14 @@ export default function PatientDetails() {
           {activeTab === 'invoices' && (
             <div className="space-y-2">
               {invoices.length === 0 && <EmptyState text="No invoices recorded." />}
+              {invoices.length > 0 && (
+                <Link
+                  to={`/payments/patient/${patient.id}`}
+                  className="inline-block text-sm text-primary-600 font-semibold hover:underline mb-1"
+                >
+                  View full payment & installment history →
+                </Link>
+              )}
               {invoices.map((inv) => (
                 <div key={inv.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100">
                   <div>
@@ -239,7 +247,12 @@ export default function PatientDetails() {
                     <p className="text-xs text-gray-400">{inv.date}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-gray-700">₹{inv.amount.toLocaleString('en-IN')}</span>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-700">₹{inv.amount.toLocaleString('en-IN')}</p>
+                      {inv.balance > 0 && (
+                        <p className="text-xs text-rose-500">₹{inv.balance.toLocaleString('en-IN')} due</p>
+                      )}
+                    </div>
                     <Badge>{inv.status}</Badge>
                   </div>
                 </div>
