@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import { Plus, Minus, Trash2, Printer, Receipt, AlertCircle, Save, CheckCircle2, FilePlus2 } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { Plus, Minus, Trash2, Printer, Receipt, AlertCircle, Save, CheckCircle2, FilePlus2, Pill } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import Button from '../components/common/Button.jsx'
-import SearchInput from '../components/common/SearchInput.jsx'
 import Badge from '../components/common/Badge.jsx'
 import { FormField, Select, TextInput } from '../components/common/FormField.jsx'
 import { getPatients } from '../api/patients.js'
@@ -35,6 +34,7 @@ function buildLineItemsFromBill(billItems, inventory) {
 
 export default function Billing() {
   const location = useLocation()
+  const navigate = useNavigate()
   const incomingBillItems = location.state?.billItems
   const incomingPatientId = location.state?.patientId
 
@@ -46,7 +46,8 @@ export default function Billing() {
   const [clinicProfile, setClinicProfile] = useState(null)
 
   const [patientId, setPatientId] = useState(incomingPatientId || '')
-  const [patientQuery, setPatientQuery] = useState('')
+  const [patientSearchQuery, setPatientSearchQuery] = useState('')
+  const [patientSearchOpen, setPatientSearchOpen] = useState(false)
   const [lineItems, setLineItems] = useState([])
   const [discountEnabled, setDiscountEnabled] = useState(false)
   const [discount, setDiscount] = useState(0)
@@ -96,10 +97,32 @@ export default function Billing() {
 
   const selectedPatient = patients.find((p) => p.id === patientId)
 
-  const filteredPatients = useMemo(
-    () => patients.filter((p) => p.name.toLowerCase().includes(patientQuery.toLowerCase())),
-    [patients, patientQuery]
-  )
+  const filteredPatients = useMemo(() => {
+    const q = patientSearchQuery.trim().toLowerCase()
+    if (!q) return patients
+    return patients.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.phone || '').toLowerCase().includes(q) ||
+        p.id.toLowerCase().includes(q) ||
+        (p.email || '').toLowerCase().includes(q)
+    )
+  }, [patients, patientSearchQuery])
+
+  function openPatientSearch() {
+    if (formLocked) return
+    setPatientSearchQuery('')
+    setPatientSearchOpen(true)
+  }
+
+  function closePatientSearch() {
+    setPatientSearchOpen(false)
+  }
+
+  function selectPatient(p) {
+    setPatientId(p.id)
+    closePatientSearch()
+  }
 
   function addItem(kind) {
     const options = kind === 'Treatment' ? treatmentOptions : medicineOptions
@@ -188,6 +211,16 @@ export default function Billing() {
     window.print()
   }
 
+  function handlePrescription() {
+    const medicineItems = lineItems.filter((item) => item.type === 'Medicine')
+    navigate('/pharmacy', {
+      state: {
+        patientId,
+        medicines: medicineItems.map((item) => ({ id: item.id, name: item.name })),
+      },
+    })
+  }
+
   async function handleSaveInvoice() {
     setError('')
     if (formLocked) return
@@ -249,16 +282,11 @@ export default function Billing() {
         title="Billing"
         subtitle="Create an invoice for treatments and medicines"
         actions={
-          <>
-            <Button variant="outline" icon={Printer} onClick={handlePrint}>
-              Print Invoice
+          formLocked && (
+            <Button variant="secondary" icon={FilePlus2} onClick={handleNewInvoice}>
+              New Invoice
             </Button>
-            {formLocked && (
-              <Button variant="secondary" icon={FilePlus2} onClick={handleNewInvoice}>
-                New Invoice
-              </Button>
-            )}
-          </>
+          )
         }
       />
 
@@ -280,20 +308,50 @@ export default function Billing() {
         <div className="lg:col-span-2 space-y-6 print:hidden">
           <Card>
             <h3 className="font-bold text-gray-800 mb-4">Patient</h3>
-            <SearchInput
-              value={patientQuery}
-              onChange={setPatientQuery}
-              placeholder="Search patients by name..."
-              className="mb-3"
-            />
-            <FormField label="Select Patient">
-              <Select value={patientId} onChange={(e) => setPatientId(e.target.value)} disabled={formLocked}>
-                {filteredPatients.length === 0 && <option value="">No patients found</option>}
-                {filteredPatients.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} — {p.id}</option>
-                ))}
-              </Select>
-            </FormField>
+            <div className="relative">
+              {patientSearchOpen ? (
+                <>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={patientSearchQuery}
+                    onChange={(e) => setPatientSearchQuery(e.target.value)}
+                    onBlur={closePatientSearch}
+                    placeholder="Search by name, phone, or patient ID..."
+                    className="w-full text-sm px-3 py-2 rounded-xl border border-primary-300 focus:ring-2 focus:ring-primary-100 outline-none"
+                  />
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-card">
+                    {filteredPatients.length === 0 && (
+                      <p className="px-3 py-2 text-sm text-gray-400">No patients found.</p>
+                    )}
+                    {filteredPatients.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => selectPatient(p)}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-primary-50 flex items-center justify-between gap-2"
+                      >
+                        <span className="truncate">
+                          <span className="font-medium text-gray-800">{p.name}</span>
+                          <span className="text-gray-400"> — {p.id}</span>
+                        </span>
+                        {p.phone && <span className="text-gray-400 shrink-0 text-xs">{p.phone}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={openPatientSearch}
+                  disabled={formLocked}
+                  className="w-full text-left text-sm px-3 py-2 rounded-xl border border-gray-200 hover:border-primary-300 truncate transition disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {selectedPatient ? `${selectedPatient.name} — ${selectedPatient.id}` : 'Search and select a patient...'}
+                </button>
+              )}
+            </div>
           </Card>
 
           <Card>
@@ -401,6 +459,15 @@ export default function Billing() {
               {lineItems.length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-8">No items added yet.</p>
               )}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <Button variant="secondary" icon={Pill} onClick={handlePrescription} disabled={!patientId}>
+                Prescription
+              </Button>
+              <p className="text-xs text-gray-400 mt-2">
+                Opens Pharmacy with this patient and any medicine line items ready to prescribe.
+              </p>
             </div>
           </Card>
 
@@ -589,19 +656,27 @@ export default function Billing() {
           )}
 
           {formLocked ? (
-            <Button className="w-full mt-5" variant="secondary" icon={CheckCircle2} disabled>
-              Invoice Saved
-            </Button>
+            <>
+              <div className="flex items-center justify-center gap-1.5 text-emerald-700 text-sm font-semibold mt-5">
+                <CheckCircle2 size={16} /> Invoice Saved
+              </div>
+              <Button className="w-full mt-3" icon={Printer} onClick={handlePrint}>
+                Print Invoice
+              </Button>
+              <p className="text-xs text-gray-400 text-center mt-2">
+                This payment has been added to Payment History.
+              </p>
+            </>
           ) : (
-            <Button className="w-full mt-5" icon={Save} onClick={handleSaveInvoice} disabled={saving}>
-              {saving ? 'Saving…' : 'Save Invoice'}
-            </Button>
+            <>
+              <Button className="w-full mt-5" icon={Save} onClick={handleSaveInvoice} disabled={saving}>
+                {saving ? 'Saving…' : 'Save Invoice'}
+              </Button>
+              <p className="text-xs text-gray-400 text-center mt-2">
+                Save the invoice to add this payment to Payment History. Printing becomes available once it's saved.
+              </p>
+            </>
           )}
-          <p className="text-xs text-gray-400 text-center mt-2">
-            {formLocked
-              ? 'This payment has been added to Payment History.'
-              : 'Saving adds this payment to Payment History. Printing alone does not save it.'}
-          </p>
         </Card>
 
         {/* Dedicated printable invoice — screen-hidden, print-only */}

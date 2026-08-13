@@ -22,9 +22,9 @@ const navItems = [
   { to: '/patients', label: 'Patients', icon: Users },
   { to: '/patients/register', label: 'Register Patient', icon: UserPlus },
   { to: '/billing', label: 'Billing', icon: Receipt },
+  { to: '/pharmacy', label: 'Pharmacy', icon: Pill },
   { to: '/payments', label: 'Payments', icon: CreditCard },
   { to: '/inventory', label: 'Inventory', icon: Boxes },
-  { to: '/pharmacy', label: 'Pharmacy', icon: Pill },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]

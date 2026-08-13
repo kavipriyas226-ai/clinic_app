@@ -1,24 +1,29 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Trash2, ShoppingCart, Pill, AlertCircle } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import SearchInput from '../components/common/SearchInput.jsx'
 import Button from '../components/common/Button.jsx'
 import Badge from '../components/common/Badge.jsx'
-import { FormField, Select, TextInput } from '../components/common/FormField.jsx'
+import { TextInput } from '../components/common/FormField.jsx'
 import { getInventory } from '../api/inventory.js'
 import { getPatients } from '../api/patients.js'
 import { createPrescription } from '../api/prescriptions.js'
 
 export default function Pharmacy() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const incomingPatientId = location.state?.patientId
+  const incomingMedicines = location.state?.medicines
+
   const [inventory, setInventory] = useState([])
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [patientQuery, setPatientQuery] = useState('')
-  const [patientId, setPatientId] = useState('')
+  const [patientSearchQuery, setPatientSearchQuery] = useState('')
+  const [patientSearchOpen, setPatientSearchOpen] = useState(false)
+  const [patientId, setPatientId] = useState(incomingPatientId || '')
   const [prescription, setPrescription] = useState([])
   const [bill, setBill] = useState([])
   const [error, setError] = useState('')
@@ -29,20 +34,60 @@ export default function Pharmacy() {
       .then(([inv, pts]) => {
         setInventory(inv)
         setPatients(pts)
-        if (pts.length > 0) setPatientId(pts[0].id)
+        if (incomingPatientId && pts.some((p) => p.id === incomingPatientId)) {
+          setPatientId(incomingPatientId)
+        } else if (pts.length > 0) {
+          setPatientId(pts[0].id)
+        }
+        if (incomingMedicines && incomingMedicines.length > 0) {
+          setPrescription(
+            incomingMedicines.map((m) => ({
+              uid: crypto.randomUUID(),
+              medicineId: m.id,
+              name: m.name,
+              dosage: '1 dose',
+              frequency: 'Once daily',
+              duration: '7 days',
+            }))
+          )
+        }
       })
       .finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const selectedPatient = patients.find((p) => p.id === patientId)
 
   const filtered = useMemo(
     () => inventory.filter((m) => m.name.toLowerCase().includes(query.toLowerCase())),
     [inventory, query]
   )
 
-  const filteredPatients = useMemo(
-    () => patients.filter((p) => p.name.toLowerCase().includes(patientQuery.toLowerCase())),
-    [patients, patientQuery]
-  )
+  const filteredPatients = useMemo(() => {
+    const q = patientSearchQuery.trim().toLowerCase()
+    if (!q) return patients
+    return patients.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.phone || '').toLowerCase().includes(q) ||
+        p.id.toLowerCase().includes(q) ||
+        (p.email || '').toLowerCase().includes(q)
+    )
+  }, [patients, patientSearchQuery])
+
+  function openPatientSearch() {
+    setPatientSearchQuery('')
+    setPatientSearchOpen(true)
+  }
+
+  function closePatientSearch() {
+    setPatientSearchOpen(false)
+  }
+
+  function selectPatient(p) {
+    setPatientId(p.id)
+    closePatientSearch()
+  }
 
   function addToPrescription(med) {
     setPrescription((prev) => [
@@ -139,18 +184,49 @@ export default function Pharmacy() {
         {/* Prescription builder */}
         <Card className="xl:col-span-1">
           <h3 className="font-bold text-gray-800 mb-4">Prescription</h3>
-          <SearchInput
-            value={patientQuery}
-            onChange={setPatientQuery}
-            placeholder="Search patients by name..."
-            className="mb-3"
-          />
-          <FormField label="Patient" className="mb-4">
-            <Select value={patientId} onChange={(e) => setPatientId(e.target.value)}>
-              {filteredPatients.length === 0 && <option value="">No patients found</option>}
-              {filteredPatients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </Select>
-          </FormField>
+          <div className="relative mb-4">
+            {patientSearchOpen ? (
+              <>
+                <input
+                  autoFocus
+                  type="text"
+                  value={patientSearchQuery}
+                  onChange={(e) => setPatientSearchQuery(e.target.value)}
+                  onBlur={closePatientSearch}
+                  placeholder="Search by name, phone, or patient ID..."
+                  className="w-full text-sm px-3 py-2 rounded-xl border border-primary-300 focus:ring-2 focus:ring-primary-100 outline-none"
+                />
+                <div className="absolute z-20 top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-card">
+                  {filteredPatients.length === 0 && (
+                    <p className="px-3 py-2 text-sm text-gray-400">No patients found.</p>
+                  )}
+                  {filteredPatients.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectPatient(p)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-primary-50 flex items-center justify-between gap-2"
+                    >
+                      <span className="truncate">
+                        <span className="font-medium text-gray-800">{p.name}</span>
+                        <span className="text-gray-400"> — {p.id}</span>
+                      </span>
+                      {p.phone && <span className="text-gray-400 shrink-0 text-xs">{p.phone}</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={openPatientSearch}
+                className="w-full text-left text-sm px-3 py-2 rounded-xl border border-gray-200 hover:border-primary-300 truncate transition"
+              >
+                {selectedPatient ? `${selectedPatient.name} — ${selectedPatient.id}` : 'Search and select a patient...'}
+              </button>
+            )}
+          </div>
 
           <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
             {prescription.length === 0 && (
