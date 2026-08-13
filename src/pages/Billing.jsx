@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Plus, Minus, Trash2, Printer, Receipt, AlertCircle } from 'lucide-react'
+import { Plus, Minus, Trash2, Printer, Receipt, AlertCircle, Save, CheckCircle2, FilePlus2 } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import Button from '../components/common/Button.jsx'
 import SearchInput from '../components/common/SearchInput.jsx'
+import Badge from '../components/common/Badge.jsx'
 import { FormField, Select, TextInput } from '../components/common/FormField.jsx'
 import { getPatients } from '../api/patients.js'
 import { getTreatmentOptions } from '../api/treatments.js'
@@ -55,7 +56,7 @@ export default function Billing() {
   const [initialPaymentMethod, setInitialPaymentMethod] = useState('UPI')
   const [itemSearch, setItemSearch] = useState({ idx: null, query: '' })
   const [error, setError] = useState('')
-  const [printing, setPrinting] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [patientPrescription, setPatientPrescription] = useState(null)
   const [savedInvoice, setSavedInvoice] = useState(null)
   const [printedAt, setPrintedAt] = useState(null)
@@ -148,17 +149,50 @@ export default function Billing() {
     if (!initialPaymentTouched) setInitialPaymentAmount(total)
   }, [total, initialPaymentTouched])
 
-  async function handlePrintInvoice() {
-    setError('')
+  const formLocked = !!savedInvoice
+
+  // Payment details shown on the invoice. Before Save is clicked these are a live
+  // preview computed from the form; once saved, they reflect the persisted invoice
+  // so the displayed numbers always match what Payment History actually has.
+  const draftAmountPaid = Number(initialPaymentAmount) || 0
+  const draftBalance = Math.max(0, total - draftAmountPaid)
+  const draftStatus = draftAmountPaid <= 0 ? 'Pending' : draftBalance <= 0 ? 'Fully Paid' : 'Partially Paid'
+  const draftMethod = draftAmountPaid > 0 ? initialPaymentMethod : '—'
+
+  const paymentDetails = formLocked
+    ? {
+        total: savedInvoice.total,
+        amountPaid: savedInvoice.amountPaid,
+        balance: savedInvoice.balance,
+        status: savedInvoice.status,
+        method: savedInvoice.method,
+      }
+    : { total, amountPaid: draftAmountPaid, balance: draftBalance, status: draftStatus, method: draftMethod }
+
+  function validateForm() {
     if (!patientId || lineItems.length === 0) {
-      setError('Select a patient and add at least one line item before printing.')
-      return
+      setError('Select a patient and add at least one line item before continuing.')
+      return false
     }
     if (initialPaymentAmount < 0 || initialPaymentAmount > total) {
       setError(`Amount received now cannot exceed the invoice total of ₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}.`)
-      return
+      return false
     }
-    setPrinting(true)
+    return true
+  }
+
+  function handlePrint() {
+    setError('')
+    if (!validateForm()) return
+    setPrintedAt(new Date())
+    window.print()
+  }
+
+  async function handleSaveInvoice() {
+    setError('')
+    if (formLocked) return
+    if (!validateForm()) return
+    setSaving(true)
     try {
       const invoice = await createInvoice({
         patientId,
@@ -177,13 +211,28 @@ export default function Billing() {
         initialPaymentMethod,
       })
       setSavedInvoice(invoice)
-      setPrintedAt(new Date())
-      window.print()
     } catch (err) {
       setError(err.response?.data?.message || 'Could not save the invoice. Please try again.')
     } finally {
-      setPrinting(false)
+      setSaving(false)
     }
+  }
+
+  function handleNewInvoice() {
+    setSavedInvoice(null)
+    setPrintedAt(null)
+    setError('')
+    setPatientId(patients[0]?.id || '')
+    setLineItems(
+      treatmentOptions.length > 0
+        ? [{ id: treatmentOptions[0].id, type: 'Treatment', name: treatmentOptions[0].name, price: treatmentOptions[0].price, qty: 1, amount: treatmentOptions[0].price }]
+        : []
+    )
+    setDiscountEnabled(false)
+    setDiscount(0)
+    setGstEnabled(false)
+    setInitialPaymentTouched(false)
+    setInitialPaymentMethod('UPI')
   }
 
   if (loading) {
@@ -200,9 +249,16 @@ export default function Billing() {
         title="Billing"
         subtitle="Create an invoice for treatments and medicines"
         actions={
-          <Button icon={Printer} onClick={handlePrintInvoice} disabled={printing}>
-            {printing ? 'Saving…' : 'Print Invoice'}
-          </Button>
+          <>
+            <Button variant="outline" icon={Printer} onClick={handlePrint}>
+              Print Invoice
+            </Button>
+            {formLocked && (
+              <Button variant="secondary" icon={FilePlus2} onClick={handleNewInvoice}>
+                New Invoice
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -210,6 +266,13 @@ export default function Billing() {
         <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 mb-4 print:hidden">
           <AlertCircle size={15} className="shrink-0" />
           {error}
+        </div>
+      )}
+
+      {formLocked && (
+        <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 mb-4 print:hidden">
+          <CheckCircle2 size={15} className="shrink-0" />
+          Invoice {savedInvoice.id} saved — this payment has been added to Payment History. Start a new invoice to make further changes.
         </div>
       )}
 
@@ -224,7 +287,7 @@ export default function Billing() {
               className="mb-3"
             />
             <FormField label="Select Patient">
-              <Select value={patientId} onChange={(e) => setPatientId(e.target.value)}>
+              <Select value={patientId} onChange={(e) => setPatientId(e.target.value)} disabled={formLocked}>
                 {filteredPatients.length === 0 && <option value="">No patients found</option>}
                 {filteredPatients.map((p) => (
                   <option key={p.id} value={p.id}>{p.name} — {p.id}</option>
@@ -237,10 +300,10 @@ export default function Billing() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-800">Line Items</h3>
               <div className="flex gap-2">
-                <Button size="sm" variant="secondary" icon={Plus} onClick={() => addItem('Treatment')}>
+                <Button size="sm" variant="secondary" icon={Plus} onClick={() => addItem('Treatment')} disabled={formLocked}>
                   Treatment
                 </Button>
-                <Button size="sm" variant="secondary" icon={Plus} onClick={() => addItem('Medicine')}>
+                <Button size="sm" variant="secondary" icon={Plus} onClick={() => addItem('Medicine')} disabled={formLocked}>
                   Medicine
                 </Button>
               </div>
@@ -290,7 +353,8 @@ export default function Billing() {
                         <button
                           type="button"
                           onClick={() => openItemSearch(idx)}
-                          className="w-full text-left text-sm px-3 py-2 rounded-xl border border-gray-200 hover:border-primary-300 truncate transition"
+                          disabled={formLocked}
+                          className="w-full text-left text-sm px-3 py-2 rounded-xl border border-gray-200 hover:border-primary-300 truncate transition disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           {item.name}
                         </button>
@@ -299,14 +363,16 @@ export default function Billing() {
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => updateQty(idx, Math.max(1, item.qty - 1))}
-                        className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-primary-50"
+                        disabled={formLocked}
+                        className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-primary-50 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         <Minus size={13} />
                       </button>
                       <span className="w-8 text-center text-sm font-semibold">{item.qty}</span>
                       <button
                         onClick={() => updateQty(idx, item.qty + 1)}
-                        className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-primary-50"
+                        disabled={formLocked}
+                        className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-primary-50 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         <Plus size={13} />
                       </button>
@@ -317,13 +383,15 @@ export default function Billing() {
                         type="number"
                         min="0"
                         value={item.amount}
+                        disabled={formLocked}
                         onChange={(e) => updateItem(idx, { amount: e.target.value === '' ? '' : Number(e.target.value) })}
-                        className="w-full pl-5 pr-2 py-1.5 text-sm font-semibold text-gray-700 text-right rounded-lg border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition"
+                        className="w-full pl-5 pr-2 py-1.5 text-sm font-semibold text-gray-700 text-right rounded-lg border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                     </div>
                     <button
                       onClick={() => removeItem(idx)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:bg-rose-100 hover:text-rose-600 shrink-0"
+                      disabled={formLocked}
+                      className="p-1.5 rounded-lg text-gray-400 hover:bg-rose-100 hover:text-rose-600 shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <Trash2 size={15} />
                     </button>
@@ -342,7 +410,8 @@ export default function Billing() {
               <button
                 type="button"
                 onClick={() => setDiscountEnabled((v) => !v)}
-                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+                disabled={formLocked}
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 disabled:opacity-60 disabled:cursor-not-allowed ${
                   discountEnabled ? 'bg-primary-500' : 'bg-gray-200'
                 }`}
                 aria-pressed={discountEnabled}
@@ -363,7 +432,7 @@ export default function Billing() {
                 type="number"
                 min="0"
                 max="100"
-                disabled={!discountEnabled}
+                disabled={!discountEnabled || formLocked}
                 value={discount}
                 onChange={(e) => setDiscount(Number(e.target.value) || 0)}
                 className={!discountEnabled ? 'opacity-50 cursor-not-allowed' : ''}
@@ -382,7 +451,8 @@ export default function Billing() {
               <button
                 type="button"
                 onClick={() => setGstEnabled((v) => !v)}
-                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+                disabled={formLocked}
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 disabled:opacity-60 disabled:cursor-not-allowed ${
                   gstEnabled ? 'bg-primary-500' : 'bg-gray-200'
                 }`}
                 aria-pressed={gstEnabled}
@@ -398,7 +468,7 @@ export default function Billing() {
           </Card>
 
           <Card>
-            <h3 className="font-bold text-gray-800 mb-1">Payment Received (This Visit)</h3>
+            <h3 className="font-bold text-gray-800 mb-1">Payment Details (This Visit)</h3>
             <p className="text-xs text-gray-400 mb-4">
               Defaults to the full invoice total. Lower it to start an installment plan — the remaining balance can be collected on later visits from the Payments module.
             </p>
@@ -408,6 +478,7 @@ export default function Billing() {
                   type="number"
                   min="0"
                   max={total}
+                  disabled={formLocked}
                   value={initialPaymentAmount}
                   onChange={(e) => {
                     setInitialPaymentTouched(true)
@@ -416,7 +487,7 @@ export default function Billing() {
                 />
               </FormField>
               <FormField label="Payment Method">
-                <Select value={initialPaymentMethod} onChange={(e) => setInitialPaymentMethod(e.target.value)}>
+                <Select value={initialPaymentMethod} onChange={(e) => setInitialPaymentMethod(e.target.value)} disabled={formLocked}>
                   <option>UPI</option>
                   <option>Card</option>
                   <option>Cash</option>
@@ -472,6 +543,32 @@ export default function Billing() {
             </div>
           </div>
 
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <h4 className="font-bold text-gray-800 text-sm mb-2">Payment Details</h4>
+            <div className="space-y-1.5 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Total Treatment Amount</span>
+                <span className="font-medium text-gray-800">₹{paymentDetails.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Amount Paid</span>
+                <span className="font-medium text-emerald-700">₹{paymentDetails.amountPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Remaining Balance</span>
+                <span className="font-medium text-rose-600">₹{paymentDetails.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+              </div>
+              <div className="flex justify-between items-center text-gray-600">
+                <span>Payment Status</span>
+                <Badge>{paymentDetails.status}</Badge>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Payment Method</span>
+                <span className="font-medium text-gray-800">{paymentDetails.method}</span>
+              </div>
+            </div>
+          </div>
+
           {patientPrescription && (
             <div className="mt-5 pt-4 border-t border-gray-100">
               <h4 className="font-bold text-gray-800 text-sm mb-2">Prescription {patientPrescription.id}</h4>
@@ -491,9 +588,20 @@ export default function Billing() {
             </div>
           )}
 
-          <Button className="w-full mt-5" icon={Printer} onClick={handlePrintInvoice} disabled={printing}>
-            {printing ? 'Saving…' : 'Print Invoice'}
-          </Button>
+          {formLocked ? (
+            <Button className="w-full mt-5" variant="secondary" icon={CheckCircle2} disabled>
+              Invoice Saved
+            </Button>
+          ) : (
+            <Button className="w-full mt-5" icon={Save} onClick={handleSaveInvoice} disabled={saving}>
+              {saving ? 'Saving…' : 'Save Invoice'}
+            </Button>
+          )}
+          <p className="text-xs text-gray-400 text-center mt-2">
+            {formLocked
+              ? 'This payment has been added to Payment History.'
+              : 'Saving adds this payment to Payment History. Printing alone does not save it.'}
+          </p>
         </Card>
 
         {/* Dedicated printable invoice — screen-hidden, print-only */}
@@ -523,8 +631,10 @@ export default function Billing() {
             </div>
             <div className="text-right shrink-0">
               <h2 className="text-lg font-bold uppercase tracking-wide">Invoice</h2>
-              {savedInvoice?.id && (
+              {savedInvoice?.id ? (
                 <p className="text-xs text-gray-500 mt-1">Invoice No: <span className="font-semibold text-gray-700">{savedInvoice.id}</span></p>
+              ) : (
+                <p className="text-xs font-bold text-amber-600 mt-1 uppercase tracking-wide">Preview — Not Saved</p>
               )}
               <p className="text-xs text-gray-500 mt-1">
                 Date: {(printedAt || new Date()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -586,6 +696,34 @@ export default function Billing() {
                 <span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
             </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t-2 border-gray-800">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Payment Details</h3>
+            <table className="w-full text-sm border-collapse">
+              <tbody>
+                <tr className="border-b border-gray-200">
+                  <td className="py-1.5 pr-2 text-gray-600">Total Treatment Amount</td>
+                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800">₹{paymentDetails.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <td className="py-1.5 pr-2 text-gray-600">Amount Paid</td>
+                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800">₹{paymentDetails.amountPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <td className="py-1.5 pr-2 text-gray-600">Remaining Balance</td>
+                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800">₹{paymentDetails.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <td className="py-1.5 pr-2 text-gray-600">Payment Status</td>
+                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800">{paymentDetails.status}</td>
+                </tr>
+                <tr>
+                  <td className="py-1.5 pr-2 text-gray-600">Payment Method</td>
+                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800">{paymentDetails.method}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           {patientPrescription && (
