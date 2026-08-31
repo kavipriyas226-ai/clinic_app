@@ -679,81 +679,86 @@ export default function Billing() {
           )}
         </Card>
 
-        {/* Dedicated printable invoice — screen-hidden, print-only */}
-        <div className="hidden print:block print:text-gray-900">
-          <div className="flex items-start justify-between gap-6 pb-4 border-b-2 border-gray-800">
-            <div className="flex items-start gap-3 min-w-0">
+        {/* Dedicated printable invoice — screen-hidden, print-only. Sized for A5 paper. */}
+        <div className="hidden print:block print:text-gray-900 text-[11px] leading-snug">
+          <style>{`
+            @page {
+              size: A5;
+              margin: 10mm 9mm;
+            }
+          `}</style>
+
+          <div className="flex items-start justify-between gap-3 pb-2 border-b-2 border-gray-800">
+            <div className="flex items-start gap-2 min-w-0">
               <img
                 src={clinicProfile?.logoDataUrl || logo}
                 alt={clinicProfile?.name || 'Clinic logo'}
-                className="w-14 h-14 object-contain shrink-0"
+                className="w-9 h-9 object-contain shrink-0"
               />
               <div className="min-w-0">
-                <h1 className="text-xl font-bold leading-tight">{clinicProfile?.name}</h1>
+                <h1 className="text-sm font-bold leading-tight">{clinicProfile?.name}</h1>
                 {clinicProfile?.tagline && (
-                  <p className="text-xs text-gray-500 mt-0.5">{clinicProfile.tagline}</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5 leading-snug">{clinicProfile.tagline}</p>
                 )}
-                <p className="text-xs text-gray-600 mt-1.5 whitespace-pre-line leading-relaxed">
+                <p className="text-[9px] text-gray-600 mt-1 whitespace-pre-line leading-snug">
                   {clinicProfile?.address}
                 </p>
-                <p className="text-xs text-gray-600 mt-0.5">
+                <p className="text-[9px] text-gray-600 mt-0.5 leading-snug">
                   {[clinicProfile?.phone, clinicProfile?.email].filter(Boolean).join('  ·  ')}
                 </p>
                 {clinicProfile?.gstin && (
-                  <p className="text-xs text-gray-600 mt-0.5">GSTIN: {clinicProfile.gstin}</p>
+                  <p className="text-[9px] text-gray-600 mt-0.5 leading-snug">GSTIN: {clinicProfile.gstin}</p>
                 )}
               </div>
             </div>
             <div className="text-right shrink-0">
-              <h2 className="text-lg font-bold uppercase tracking-wide">Invoice</h2>
+              <h2 className="text-xs font-bold uppercase tracking-wide">Invoice</h2>
               {savedInvoice?.id ? (
-                <p className="text-xs text-gray-500 mt-1">Invoice No: <span className="font-semibold text-gray-700">{savedInvoice.id}</span></p>
+                <p className="text-[9px] text-gray-500 mt-0.5">Invoice No: <span className="font-semibold text-gray-700">{savedInvoice.id}</span></p>
               ) : (
-                <p className="text-xs font-bold text-amber-600 mt-1 uppercase tracking-wide">Preview — Not Saved</p>
+                <p className="text-[9px] font-bold text-amber-600 mt-0.5 uppercase tracking-wide">Preview — Not Saved</p>
               )}
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-[9px] text-gray-500 mt-0.5">
                 Date: {(printedAt || new Date()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-[9px] text-gray-500">
                 Time: {(printedAt || new Date()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
           </div>
 
-          <div className="py-4">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Billed To</p>
-            <p className="text-sm font-semibold text-gray-800">{selectedPatient?.name}</p>
-            <p className="text-xs text-gray-600">Patient ID: {selectedPatient?.id}</p>
-            {selectedPatient?.phone && <p className="text-xs text-gray-600">{selectedPatient.phone}</p>}
+          <div className="py-2">
+            <p className="text-[8px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Billed To</p>
+            <p className="text-[11px] font-semibold text-gray-800">{selectedPatient?.name}</p>
+            <p className="text-[9px] text-gray-600">Patient ID: {selectedPatient?.id}</p>
+            {selectedPatient?.phone && <p className="text-[9px] text-gray-600">{selectedPatient.phone}</p>}
           </div>
 
-          <table className="w-full text-sm border-collapse">
+          <table className="w-full border-collapse table-fixed">
             <thead>
-              <tr className="border-b-2 border-gray-800 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                <th className="py-2 pr-2 w-8">#</th>
-                <th className="py-2 pr-2">Item</th>
-                <th className="py-2 pr-2 text-left">Type</th>
-                <th className="py-2 pr-2 text-right w-16">Qty</th>
-                <th className="py-2 pr-2 text-right w-24">Price</th>
-                <th className="py-2 pl-2 text-right w-28">Amount</th>
+              <tr className="border-b-2 border-gray-800 text-left text-[8px] font-semibold text-gray-500 uppercase tracking-wide">
+                <th className="py-1 pr-1 w-4">#</th>
+                <th className="py-1 pr-1">Item</th>
+                <th className="py-1 pr-1 text-right w-8">Qty</th>
+                <th className="py-1 pr-1 text-right w-14">Price</th>
+                <th className="py-1 pl-1 text-right w-16">Amount</th>
               </tr>
             </thead>
             <tbody>
               {lineItems.map((item, idx) => (
                 <tr key={idx} className="border-b border-gray-200">
-                  <td className="py-2 pr-2 text-gray-500">{idx + 1}</td>
-                  <td className="py-2 pr-2 text-gray-800">{item.name}</td>
-                  <td className="py-2 pr-2 text-gray-500">{item.type}</td>
-                  <td className="py-2 pr-2 text-right text-gray-600">{item.qty}</td>
-                  <td className="py-2 pr-2 text-right text-gray-600">₹{Number(item.price || 0).toLocaleString('en-IN')}</td>
-                  <td className="py-2 pl-2 text-right font-medium text-gray-800">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</td>
+                  <td className="py-1 pr-1 text-gray-500 align-top">{idx + 1}</td>
+                  <td className="py-1 pr-1 text-gray-800 align-top break-words">{item.name}</td>
+                  <td className="py-1 pr-1 text-right text-gray-600 align-top">{item.qty}</td>
+                  <td className="py-1 pr-1 text-right text-gray-600 align-top">₹{Number(item.price || 0).toLocaleString('en-IN')}</td>
+                  <td className="py-1 pl-1 text-right font-medium text-gray-800 align-top">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <div className="flex justify-end mt-4">
-            <div className="w-64 space-y-1.5 text-sm">
+          <div className="flex justify-end mt-2">
+            <div className="w-2/5 space-y-1">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
                 <span>₹{subtotal.toLocaleString('en-IN')}</span>
@@ -766,74 +771,74 @@ export default function Billing() {
                 <span>GST {gstEnabled ? '(18%)' : '(disabled)'}</span>
                 <span>+ ₹{gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
-              <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t-2 border-gray-800">
+              <div className="flex justify-between text-xs font-bold text-gray-900 pt-1 border-t-2 border-gray-800">
                 <span>Total</span>
                 <span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t-2 border-gray-800">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Payment Details</h3>
-            <table className="w-full text-sm border-collapse">
+          <div className="mt-3 pt-2 border-t-2 border-gray-800">
+            <h3 className="text-[8px] font-semibold uppercase tracking-wide text-gray-500 mb-1">Payment Details</h3>
+            <table className="w-full border-collapse">
               <tbody>
                 <tr className="border-b border-gray-200">
-                  <td className="py-1.5 pr-2 text-gray-600">Total Treatment Amount</td>
-                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800">₹{paymentDetails.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                  <td className="py-0.5 pr-1 text-gray-600">Total Treatment Amount</td>
+                  <td className="py-0.5 pl-1 text-right font-semibold text-gray-800">₹{paymentDetails.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
                 </tr>
                 <tr className="border-b border-gray-200">
-                  <td className="py-1.5 pr-2 text-gray-600">Amount Paid</td>
-                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800">₹{paymentDetails.amountPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                  <td className="py-0.5 pr-1 text-gray-600">Amount Paid</td>
+                  <td className="py-0.5 pl-1 text-right font-semibold text-gray-800">₹{paymentDetails.amountPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
                 </tr>
                 <tr className="border-b border-gray-200">
-                  <td className="py-1.5 pr-2 text-gray-600">Remaining Balance</td>
-                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800">₹{paymentDetails.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                  <td className="py-0.5 pr-1 text-gray-600">Remaining Balance</td>
+                  <td className="py-0.5 pl-1 text-right font-semibold text-gray-800">₹{paymentDetails.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
                 </tr>
                 <tr className="border-b border-gray-200">
-                  <td className="py-1.5 pr-2 text-gray-600">Payment Status</td>
-                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800">{paymentDetails.status}</td>
+                  <td className="py-0.5 pr-1 text-gray-600">Payment Status</td>
+                  <td className="py-0.5 pl-1 text-right font-semibold text-gray-800">{paymentDetails.status}</td>
                 </tr>
                 <tr>
-                  <td className="py-1.5 pr-2 text-gray-600">Payment Method</td>
-                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800">{paymentDetails.method}</td>
+                  <td className="py-0.5 pr-1 text-gray-600">Payment Method</td>
+                  <td className="py-0.5 pl-1 text-right font-semibold text-gray-800">{paymentDetails.method}</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           {patientPrescription && (
-            <div className="mt-6 pt-4 border-t-2 border-gray-800">
-              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
+            <div className="mt-3 pt-2 border-t-2 border-gray-800">
+              <h3 className="text-[8px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
                 Prescription — {patientPrescription.id}
               </h3>
               {patientPrescription.items.length > 0 ? (
-                <table className="w-full text-sm border-collapse">
+                <table className="w-full border-collapse table-fixed">
                   <thead>
-                    <tr className="border-b border-gray-300 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                      <th className="py-1.5 pr-2">Medicine</th>
-                      <th className="py-1.5 px-2">Dosage</th>
-                      <th className="py-1.5 px-2">Frequency</th>
-                      <th className="py-1.5 pl-2">Duration</th>
+                    <tr className="border-b border-gray-300 text-left text-[8px] font-semibold text-gray-500 uppercase tracking-wide">
+                      <th className="py-0.5 pr-1 w-[28%]">Medicine</th>
+                      <th className="py-0.5 px-1 w-[24%]">Dosage</th>
+                      <th className="py-0.5 px-1 w-[24%]">Frequency</th>
+                      <th className="py-0.5 pl-1 w-[24%]">Duration</th>
                     </tr>
                   </thead>
                   <tbody>
                     {patientPrescription.items.map((it, i) => (
                       <tr key={i} className="border-b border-gray-100">
-                        <td className="py-1.5 pr-2 text-gray-800">{it.name}</td>
-                        <td className="py-1.5 px-2 text-gray-600">{it.dosage}</td>
-                        <td className="py-1.5 px-2 text-gray-600">{it.frequency}</td>
-                        <td className="py-1.5 pl-2 text-gray-600">{it.duration}</td>
+                        <td className="py-0.5 pr-1 text-gray-800 break-words">{it.name}</td>
+                        <td className="py-0.5 px-1 text-gray-600 break-words">{it.dosage}</td>
+                        <td className="py-0.5 px-1 text-gray-600 break-words">{it.frequency}</td>
+                        <td className="py-0.5 pl-1 text-gray-600 break-words">{it.duration}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
-                <p className="text-xs text-gray-400">No medicines listed on this prescription.</p>
+                <p className="text-[9px] text-gray-400">No medicines listed on this prescription.</p>
               )}
             </div>
           )}
 
-          <div className="mt-10 pt-4 border-t border-gray-200 text-center text-[11px] text-gray-400">
+          <div className="mt-4 pt-2 border-t border-gray-200 text-center text-[8px] text-gray-400">
             Thank you for visiting {clinicProfile?.name}. Wishing you good health.
           </div>
         </div>
