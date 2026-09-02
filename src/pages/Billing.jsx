@@ -684,17 +684,26 @@ export default function Billing() {
           )}
         </Card>
 
-        {/* Dedicated printable invoice — screen-hidden, print-only. Sized for A5 paper. */}
-        <div className="hidden print:block print:text-gray-900 text-[11px] leading-snug">
+        {/* Dedicated printable invoice — screen-hidden, print-only. Sized for A5 paper.
+            @page margin is 0 and the page box itself is authored at the exact 148x210mm
+            physical sheet size; visual margins come from padding on this container
+            instead of the browser's page-margin box, so the printed result doesn't
+            depend on how a given print destination (a real printer, "Microsoft Print
+            to PDF", etc.) interprets @page margin — only on box-sizing, which every
+            browser handles identically. */}
+        <div
+          className="hidden print:block print:text-gray-900 text-[11px] leading-snug w-[148mm] min-h-[210mm] p-[8mm] box-border"
+        >
           <style>{`
             @page {
               size: A5 portrait;
-              margin: 8mm;
+              margin: 0;
             }
             @media print {
               html, body {
                 width: 148mm;
-                height: 210mm;
+                margin: 0;
+                padding: 0;
               }
             }
           `}</style>
@@ -704,7 +713,7 @@ export default function Billing() {
               <img
                 src={clinicProfile?.logoDataUrl || logo}
                 alt={clinicProfile?.name || 'Clinic logo'}
-                className="w-16 h-16 object-contain shrink-0"
+                className="w-20 h-20 object-contain shrink-0"
               />
               <div className="min-w-0">
                 <h1 className="text-base font-bold leading-tight">{clinicProfile?.name}</h1>
