@@ -684,27 +684,38 @@ export default function Billing() {
           )}
         </Card>
 
-        {/* Dedicated printable invoice — screen-hidden, print-only. Sized for A5 paper.
-            @page margin is 0 and the page box itself is authored at the exact 148x210mm
-            physical sheet size; visual margins come from padding on this container
-            instead of the browser's page-margin box, so the printed result doesn't
-            depend on how a given print destination (a real printer, "Microsoft Print
-            to PDF", etc.) interprets @page margin — only on box-sizing, which every
-            browser handles identically. */}
-        <div
-          className="hidden print:block print:text-gray-900 text-[11px] leading-snug w-[148mm] min-h-[210mm] p-[8mm] box-border"
-        >
+        {/* Dedicated printable invoice — screen-hidden, print-only. Sized for A5 paper,
+            adapting automatically to whichever orientation is chosen in the print
+            dialog (@page size has no forced portrait/landscape, so the browser's own
+            Layout setting drives it; the (orientation: …) media queries below just
+            react to whichever one is active). @page margin is 0 and the container is
+            authored at the exact physical page size for that orientation; visual
+            margins come from padding on this container instead of the browser's
+            page-margin box, so the printed result doesn't depend on how a given print
+            destination (a real printer, "Microsoft Print to PDF", etc.) interprets
+            @page margin — only on box-sizing, which every browser handles identically.
+            In landscape the page is wider but shorter, so Billed To/Items/Totals and
+            Payment Details/Prescription move into two side-by-side columns instead of
+            one long stack, to keep the whole invoice on one shorter page. */}
+        <div className="hidden print:block print:text-gray-900 text-[11px] leading-snug a5-invoice p-[8mm] box-border">
           <style>{`
             @page {
-              size: A5 portrait;
+              size: A5;
               margin: 0;
             }
             @media print {
               html, body {
-                width: 148mm;
                 margin: 0;
                 padding: 0;
               }
+            }
+            @media print and (orientation: portrait) {
+              .a5-invoice { width: 148mm; min-height: 210mm; }
+            }
+            @media print and (orientation: landscape) {
+              .a5-invoice { width: 210mm; min-height: 148mm; }
+              .a5-columns { display: flex; gap: 6mm; align-items: flex-start; }
+              .a5-columns > .a5-col { flex: 1 1 0; min-width: 0; }
             }
           `}</style>
 
@@ -747,6 +758,8 @@ export default function Billing() {
             </div>
           </div>
 
+          <div className="a5-columns">
+          <div className="a5-col">
           <div className="py-2">
             <p className="text-[8px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Billed To</p>
             <p className="text-[11px] font-semibold text-gray-800">{selectedPatient?.name}</p>
@@ -797,8 +810,10 @@ export default function Billing() {
               </div>
             </div>
           </div>
+          </div>
 
-          <div className="mt-3 pt-2 border-t-2 border-gray-800">
+          <div className="a5-col">
+          <div className="pt-2 border-t-2 border-gray-800">
             <h3 className="text-[8px] font-semibold uppercase tracking-wide text-gray-500 mb-1">Payment Details</h3>
             <table className="w-full border-collapse">
               <tbody>
@@ -857,6 +872,8 @@ export default function Billing() {
               )}
             </div>
           )}
+          </div>
+          </div>
 
           <div className="mt-4 pt-2 border-t border-gray-200 text-center text-[8px] text-gray-400">
             Thank you for visiting {clinicProfile?.name}. Wishing you good health.
