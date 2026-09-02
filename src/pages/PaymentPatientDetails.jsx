@@ -463,6 +463,12 @@ export default function PaymentPatientDetails() {
       {/* Printable receipt */}
       {receiptTarget && (
         <div className="hidden print:block print:text-gray-900">
+          <style>{`
+            @page {
+              size: A4;
+              margin: 14mm;
+            }
+          `}</style>
           <div className="flex items-start justify-between gap-6 pb-4 border-b-2 border-gray-800">
             <div className="flex items-start gap-3 min-w-0">
               <img src={clinicProfile?.logoDataUrl || logo} alt={clinicProfile?.name || 'Clinic logo'} className="w-14 h-14 object-contain shrink-0" />

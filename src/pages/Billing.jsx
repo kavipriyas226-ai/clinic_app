@@ -683,8 +683,14 @@ export default function Billing() {
         <div className="hidden print:block print:text-gray-900 text-[11px] leading-snug">
           <style>{`
             @page {
-              size: A5;
-              margin: 10mm 9mm;
+              size: A5 portrait;
+              margin: 8mm;
+            }
+            @media print {
+              html, body {
+                width: 148mm;
+                height: 210mm;
+              }
             }
           `}</style>
 

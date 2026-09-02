@@ -35,12 +35,11 @@ html, body {
   }
 }
 
+/* Page-specific @page rules (paper size/margins) live next to their printable
+   content — e.g. Billing.jsx (A5 invoice), PaymentPatientDetails.jsx (A4 receipt) —
+   not here, since a single global @page rule would apply to every print job in
+   the app and silently override a page's own intended paper size. */
 @media print {
-  @page {
-    size: A4;
-    margin: 14mm;
-  }
-
   html, body {
     background: #fff;
   }
