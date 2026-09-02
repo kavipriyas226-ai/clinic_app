@@ -699,15 +699,15 @@ export default function Billing() {
             }
           `}</style>
 
-          <div className="flex items-start justify-between gap-3 pb-2 border-b-2 border-gray-800">
-            <div className="flex items-start gap-2 min-w-0">
+          <div className="flex items-center justify-between gap-3 pb-2 border-b-2 border-gray-800">
+            <div className="flex items-center gap-2.5 min-w-0">
               <img
                 src={clinicProfile?.logoDataUrl || logo}
                 alt={clinicProfile?.name || 'Clinic logo'}
-                className="w-9 h-9 object-contain shrink-0"
+                className="w-16 h-16 object-contain shrink-0"
               />
               <div className="min-w-0">
-                <h1 className="text-sm font-bold leading-tight">{clinicProfile?.name}</h1>
+                <h1 className="text-base font-bold leading-tight">{clinicProfile?.name}</h1>
                 {clinicProfile?.tagline && (
                   <p className="text-[9px] text-gray-500 mt-0.5 leading-snug">{clinicProfile.tagline}</p>
                 )}
