@@ -134,7 +134,7 @@ export default function Patients() {
                     <Eye size={15} />
                   </button>
                   <button
-                    onClick={() => navigate(`/patients/${p.id}?edit=1`)}
+                    onClick={() => navigate(`/patients/${p.id}/edit`)}
                     className="p-1.5 rounded-lg text-gray-400 hover:bg-primary-100 hover:text-primary-600 transition"
                     title="Edit"
                   >

@@ -1,23 +1,11 @@
-import { useEffect, useState } from 'react'
-import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
-import {
-  ArrowLeft,
-  Phone,
-  Mail,
-  MapPin,
-  Droplet,
-  AlertTriangle,
-  Pencil,
-  Receipt,
-  Pill,
-  ClipboardList,
-  Save,
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Pencil, Receipt, Pill, ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import Badge from '../components/common/Badge.jsx'
 import Button from '../components/common/Button.jsx'
-import { FormField, TextInput, TextArea } from '../components/common/FormField.jsx'
-import { getPatient, updatePatient } from '../api/patients.js'
+import { getPatient } from '../api/patients.js'
+import { patientFormSections } from '../config/patientFormSections.js'
 
 const tabs = [
   { key: 'history', label: 'Treatment History', icon: ClipboardList },
@@ -25,52 +13,31 @@ const tabs = [
   { key: 'invoices', label: 'Invoices', icon: Receipt },
 ]
 
+function formatFieldValue(field, value) {
+  if (!value) return '—'
+  if (field.type === 'date') {
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return value
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+  return value
+}
+
 export default function PatientDetails() {
   const { id } = useParams()
-  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const [editMode, setEditMode] = useState(searchParams.get('edit') === '1')
   const [activeTab, setActiveTab] = useState('history')
+  const [activeSection, setActiveSection] = useState(0)
   const [patient, setPatient] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [form, setForm] = useState({ phone: '', email: '', address: '', allergies: '', medicalNotes: '' })
-  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     getPatient(id)
-      .then((p) => {
-        setPatient(p)
-        setForm({
-          phone: p.phone || '',
-          email: p.email || '',
-          address: p.address || '',
-          allergies: p.allergies || '',
-          medicalNotes: p.medicalNotes || '',
-        })
-      })
+      .then(setPatient)
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [id])
-
-  function updateForm(field, value) {
-    setForm((prev) => ({ ...prev, [field]: value }))
-  }
-
-  async function handleEditToggle() {
-    if (editMode) {
-      setSaving(true)
-      try {
-        const updated = await updatePatient(id, form)
-        setPatient(updated)
-        setEditMode(false)
-      } finally {
-        setSaving(false)
-      }
-    } else {
-      setEditMode(true)
-    }
-  }
 
   if (loading) {
     return (
@@ -94,6 +61,8 @@ export default function PatientDetails() {
   const treatments = patient.treatments || []
   const prescriptions = patient.prescriptions || []
   const invoices = patient.invoices || []
+  const section = patientFormSections[activeSection]
+  const SectionIcon = section.icon
 
   return (
     <div>
@@ -105,26 +74,25 @@ export default function PatientDetails() {
       </button>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Profile card */}
+        {/* Patient Details card — sectioned, tab-navigable view of every Register Patient field */}
         <Card className="lg:col-span-1 h-fit">
           <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="w-14 h-14 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-lg shrink-0">
                 {patient.name.split(' ').map((n) => n[0]).join('')}
               </div>
-              <div>
-                <h2 className="font-bold text-gray-800">{patient.name}</h2>
+              <div className="min-w-0">
+                <h2 className="font-bold text-gray-800 truncate">{patient.name}</h2>
                 <p className="text-xs text-gray-400">{patient.id}</p>
               </div>
             </div>
             <Button
-              variant={editMode ? 'secondary' : 'outline'}
+              variant="outline"
               size="sm"
-              icon={editMode ? Save : Pencil}
-              onClick={handleEditToggle}
-              disabled={saving}
+              icon={Pencil}
+              onClick={() => navigate(`/patients/${id}/edit`)}
             >
-              {saving ? 'Saving…' : editMode ? 'Save' : 'Edit'}
+              Edit
             </Button>
           </div>
 
@@ -132,55 +100,68 @@ export default function PatientDetails() {
             <Badge>{patient.status}</Badge>
           </div>
 
-          {editMode ? (
-            <div className="space-y-3">
-              <FormField label="Phone">
-                <TextInput value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} />
-              </FormField>
-              <FormField label="Email">
-                <TextInput value={form.email} onChange={(e) => updateForm('email', e.target.value)} />
-              </FormField>
-              <FormField label="Address">
-                <TextArea value={form.address} onChange={(e) => updateForm('address', e.target.value)} />
-              </FormField>
-              <FormField label="Allergies">
-                <TextInput value={form.allergies} onChange={(e) => updateForm('allergies', e.target.value)} />
-              </FormField>
-              <FormField label="Medical Notes">
-                <TextArea value={form.medicalNotes} onChange={(e) => updateForm('medicalNotes', e.target.value)} />
-              </FormField>
-            </div>
-          ) : (
-            <div className="space-y-3 text-sm">
-              <InfoRow icon={Phone} label="Phone" value={patient.phone} />
-              <InfoRow icon={Mail} label="Email" value={patient.email || '—'} />
-              <InfoRow icon={MapPin} label="Address" value={patient.address || '—'} />
-              <InfoRow icon={Droplet} label="Blood Group" value={patient.bloodGroup || '—'} />
-              <InfoRow icon={AlertTriangle} label="Allergies" value={patient.allergies || '—'} />
+          {/* Section tabs */}
+          <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-100 -mt-1">
+            {patientFormSections.map((s, i) => (
+              <button
+                key={s.key}
+                onClick={() => setActiveSection(i)}
+                className={`px-2.5 py-2 text-xs font-semibold border-b-2 -mb-px transition whitespace-nowrap ${
+                  activeSection === i
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
 
-              <div className="pt-3 border-t border-gray-100">
-                <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Basic Info</p>
-                <div className="grid grid-cols-2 gap-y-2 text-gray-600">
-                  <span>Age / Gender</span>
-                  <span className="font-medium text-gray-800">{patient.age} / {patient.gender}</span>
-                  <span>DOB</span>
-                  <span className="font-medium text-gray-800">{patient.dob || '—'}</span>
-                  <span>Concern</span>
-                  <span className="font-medium text-gray-800">{patient.concern}</span>
-                  <span>Doctor</span>
-                  <span className="font-medium text-gray-800">{patient.doctor}</span>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-gray-100">
-                <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Medical Notes</p>
-                <p className="text-gray-600 leading-relaxed">{patient.medicalNotes || 'No additional notes recorded.'}</p>
-              </div>
+          {/* Active section content */}
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
+              <SectionIcon size={15} />
             </div>
-          )}
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-gray-800">{section.label}</p>
+              <p className="text-[11px] text-gray-400">{section.description}</p>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-sm mb-5">
+            {section.fields.map((field) => (
+              <div key={field.name}>
+                <p className="text-xs text-gray-400">{field.label}</p>
+                <p className="font-medium text-gray-800 whitespace-pre-line leading-relaxed">
+                  {formatFieldValue(field, patient[field.name])}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Previous / Next section navigation */}
+          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+            <button
+              onClick={() => setActiveSection((i) => Math.max(0, i - 1))}
+              disabled={activeSection === 0}
+              className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-primary-600 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-gray-500 transition"
+            >
+              <ChevronLeft size={14} /> Previous
+            </button>
+            <span className="text-[11px] text-gray-400">
+              {activeSection + 1} of {patientFormSections.length}
+            </span>
+            <button
+              onClick={() => setActiveSection((i) => Math.min(patientFormSections.length - 1, i + 1))}
+              disabled={activeSection === patientFormSections.length - 1}
+              className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-primary-600 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-gray-500 transition"
+            >
+              Next <ChevronRight size={14} />
+            </button>
+          </div>
         </Card>
 
-        {/* Tabs content */}
+        {/* Clinical activity tabs — treatment history, prescriptions, invoices */}
         <Card className="lg:col-span-2">
           <div className="flex items-center gap-1 mb-5 border-b border-gray-100 -mt-1">
             {tabs.map(({ key, label, icon: Icon }) => (
@@ -260,18 +241,6 @@ export default function PatientDetails() {
             </div>
           )}
         </Card>
-      </div>
-    </div>
-  )
-}
-
-function InfoRow({ icon: Icon, label, value }) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <Icon size={15} className="text-primary-400 mt-0.5 shrink-0" />
-      <div>
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className="font-medium text-gray-700">{value}</p>
       </div>
     </div>
   )
