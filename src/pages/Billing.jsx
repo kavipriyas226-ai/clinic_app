@@ -98,8 +98,10 @@ export default function Billing() {
   const selectedPatient = patients.find((p) => p.id === patientId)
 
   const filteredPatients = useMemo(() => {
+    // Empty query -> no results shown. The dropdown should never dump the
+    // full patient list; matches only appear once the user starts typing.
     const q = patientSearchQuery.trim().toLowerCase()
-    if (!q) return patients
+    if (!q) return []
     return patients.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
@@ -321,24 +323,27 @@ export default function Billing() {
                     className="w-full text-sm px-3 py-2 rounded-xl border border-primary-300 focus:ring-2 focus:ring-primary-100 outline-none"
                   />
                   <div className="absolute z-20 top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-card">
-                    {filteredPatients.length === 0 && (
+                    {patientSearchQuery.trim() === '' ? (
+                      <p className="px-3 py-2 text-sm text-gray-400">Start typing a name, phone, or patient ID…</p>
+                    ) : filteredPatients.length === 0 ? (
                       <p className="px-3 py-2 text-sm text-gray-400">No patients found.</p>
+                    ) : (
+                      filteredPatients.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => selectPatient(p)}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-primary-50 flex items-center justify-between gap-2"
+                        >
+                          <span className="truncate">
+                            <span className="font-medium text-gray-800">{p.name}</span>
+                            <span className="text-gray-400"> — {p.id}</span>
+                          </span>
+                          {p.phone && <span className="text-gray-400 shrink-0 text-xs">{p.phone}</span>}
+                        </button>
+                      ))
                     )}
-                    {filteredPatients.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => selectPatient(p)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-primary-50 flex items-center justify-between gap-2"
-                      >
-                        <span className="truncate">
-                          <span className="font-medium text-gray-800">{p.name}</span>
-                          <span className="text-gray-400"> — {p.id}</span>
-                        </span>
-                        {p.phone && <span className="text-gray-400 shrink-0 text-xs">{p.phone}</span>}
-                      </button>
-                    ))}
                   </div>
                 </>
               ) : (
