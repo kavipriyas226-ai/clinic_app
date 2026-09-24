@@ -51,7 +51,7 @@ export default function Billing() {
   const [lineItems, setLineItems] = useState([])
   const [discountEnabled, setDiscountEnabled] = useState(false)
   const [discount, setDiscount] = useState(0)
-  const [gstEnabled, setGstEnabled] = useState(false)
+  const [gstEnabled, setGstEnabled] = useState(true)
   const [supplyType, setSupplyType] = useState('Intra-State')
   const [initialPaymentAmount, setInitialPaymentAmount] = useState(0)
   const [initialPaymentTouched, setInitialPaymentTouched] = useState(false)
@@ -175,7 +175,7 @@ export default function Billing() {
     () => calculateGst(lineItems, discountEnabled, discount, gstEnabled, supplyType),
     [lineItems, discountEnabled, discount, gstEnabled, supplyType]
   )
-  const { subtotal, discountAmount, cgstAmount, sgstAmount, igstAmount, totalGst, total, rateBreakdown } = gstCalc
+  const { subtotal, discountAmount, totalGst, total, rateBreakdown } = gstCalc
 
   useEffect(() => {
     if (!initialPaymentTouched) setInitialPaymentAmount(total)
@@ -282,7 +282,7 @@ export default function Billing() {
     )
     setDiscountEnabled(false)
     setDiscount(0)
-    setGstEnabled(false)
+    setGstEnabled(true)
     setSupplyType('Intra-State')
     setInitialPaymentTouched(false)
     setInitialPaymentMethod('UPI')
@@ -643,38 +643,31 @@ export default function Billing() {
               <span>Discount ({discount}%)</span>
               <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
             </div>
-            {gstEnabled && rateBreakdown.length <= 1 && (
-              gstCalc.interState ? (
-                <div className="flex justify-between text-gray-600">
-                  <span>IGST {rateBreakdown[0] ? `@ ${rateBreakdown[0].rate}%` : ''}</span>
-                  <span>+ ₹{igstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+            {/* CGST/SGST (or IGST) is always shown as its own explicit line per rate in
+                use — never collapsed into one generic "GST @18%" label, even when an
+                invoice mixes multiple rates (one pair of rows per rate group then). */}
+            {gstEnabled && rateBreakdown.map((rg) => {
+              const multiRate = rateBreakdown.length > 1
+              const suffix = multiRate ? ` (${rg.rate}% items)` : ''
+              return gstCalc.interState ? (
+                <div key={rg.rate} className="flex justify-between text-gray-600">
+                  <span>IGST @ {rg.rate}%{suffix}</span>
+                  <span>+ ₹{rg.igstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                 </div>
               ) : (
-                <>
+                <div key={rg.rate} className="contents">
                   <div className="flex justify-between text-gray-600">
-                    <span>CGST {rateBreakdown[0] ? `@ ${rateBreakdown[0].rate / 2}%` : ''}</span>
-                    <span>+ ₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span>CGST @ {rg.rate / 2}%{suffix}</span>
+                    <span>+ ₹{rg.cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
-                    <span>SGST {rateBreakdown[0] ? `@ ${rateBreakdown[0].rate / 2}%` : ''}</span>
-                    <span>+ ₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span>SGST @ {rg.rate / 2}%{suffix}</span>
+                    <span>+ ₹{rg.sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                   </div>
-                </>
+                </div>
               )
-            )}
+            })}
             {gstEnabled && rateBreakdown.length > 1 && (
-              <div className="space-y-1 py-1">
-                {rateBreakdown.map((rg) => (
-                  <div key={rg.rate} className="flex justify-between text-gray-600 text-xs">
-                    <span>
-                      GST @{rg.rate}% {gstCalc.interState ? `(IGST ${rg.rate}%)` : `(CGST ${rg.rate / 2}% + SGST ${rg.rate / 2}%)`}
-                    </span>
-                    <span>+ ₹{rg.gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {gstEnabled && (
               <div className="flex justify-between text-gray-600 font-medium">
                 <span>Total GST</span>
                 <span>+ ₹{totalGst.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
@@ -873,32 +866,30 @@ export default function Billing() {
                 <span>Discount ({discount}%)</span>
                 <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
-              {gstEnabled && rateBreakdown.length <= 1 && (
-                gstCalc.interState ? (
-                  <div className="flex justify-between text-gray-600">
-                    <span>IGST {rateBreakdown[0] ? `@${rateBreakdown[0].rate}%` : ''}</span>
-                    <span>+ ₹{igstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+              {/* Same explicit CGST/SGST (or IGST) per-rate rendering as the on-screen
+                  Invoice Summary — never a generic blended "GST @18%" line, here either. */}
+              {gstEnabled && rateBreakdown.map((rg) => {
+                const multiRate = rateBreakdown.length > 1
+                const suffix = multiRate ? ` (${rg.rate}% items)` : ''
+                return gstCalc.interState ? (
+                  <div key={rg.rate} className="flex justify-between text-gray-600">
+                    <span>IGST @{rg.rate}%{suffix}</span>
+                    <span>+ ₹{rg.igstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                   </div>
                 ) : (
-                  <>
+                  <div key={rg.rate} className="contents">
                     <div className="flex justify-between text-gray-600">
-                      <span>CGST {rateBreakdown[0] ? `@${rateBreakdown[0].rate / 2}%` : ''}</span>
-                      <span>+ ₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                      <span>CGST @{rg.rate / 2}%{suffix}</span>
+                      <span>+ ₹{rg.cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
-                      <span>SGST {rateBreakdown[0] ? `@${rateBreakdown[0].rate / 2}%` : ''}</span>
-                      <span>+ ₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                      <span>SGST @{rg.rate / 2}%{suffix}</span>
+                      <span>+ ₹{rg.sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                     </div>
-                  </>
+                  </div>
                 )
-              )}
-              {gstEnabled && rateBreakdown.length > 1 && rateBreakdown.map((rg) => (
-                <div key={rg.rate} className="flex justify-between text-gray-600">
-                  <span>GST @{rg.rate}% ({gstCalc.interState ? 'IGST' : 'CGST+SGST'})</span>
-                  <span>+ ₹{rg.gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                </div>
-              ))}
-              {gstEnabled && (
+              })}
+              {gstEnabled && rateBreakdown.length > 1 && (
                 <div className="flex justify-between text-gray-600 font-medium">
                   <span>Total GST</span>
                   <span>+ ₹{totalGst.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
