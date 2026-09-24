@@ -12,8 +12,9 @@ import { getInventory } from '../api/inventory.js'
 import { getClinicProfile } from '../api/clinicProfile.js'
 import { createInvoice } from '../api/invoices.js'
 import { getPrescriptionsByPatient } from '../api/prescriptions.js'
-import { calculateGst, GST_RATE_OPTIONS } from '../utils/gstCalculator.js'
 import logo from '../assets/logo.png'
+
+const GST_RATE = 0.18
 
 function buildLineItemsFromBill(billItems, inventory) {
   return billItems.map((b) => {
@@ -27,7 +28,6 @@ function buildLineItemsFromBill(billItems, inventory) {
       price,
       qty: b.qty,
       amount: price * b.qty,
-      gstRate: med ? Number(med.gstRate) || 0 : 0,
     }
   })
 }
@@ -52,7 +52,6 @@ export default function Billing() {
   const [discountEnabled, setDiscountEnabled] = useState(false)
   const [discount, setDiscount] = useState(0)
   const [gstEnabled, setGstEnabled] = useState(false)
-  const [supplyType, setSupplyType] = useState('Intra-State')
   const [initialPaymentAmount, setInitialPaymentAmount] = useState(0)
   const [initialPaymentTouched, setInitialPaymentTouched] = useState(false)
   const [initialPaymentMethod, setInitialPaymentMethod] = useState('UPI')
@@ -69,13 +68,13 @@ export default function Billing() {
         setPatients(p)
         setTreatmentOptions(t)
         setInventory(inv)
-        setMedicineOptions(inv.map(({ id, name, price, gstRate }) => ({ id, name, price, gstRate: Number(gstRate) || 0 })))
+        setMedicineOptions(inv.map(({ id, name, price }) => ({ id, name, price })))
         setClinicProfile(profile)
 
         if (incomingBillItems && incomingBillItems.length > 0) {
           setLineItems(buildLineItemsFromBill(incomingBillItems, inv))
         } else if (t.length > 0) {
-          setLineItems([{ id: t[0].id, type: 'Treatment', name: t[0].name, price: t[0].price, qty: 1, amount: t[0].price, gstRate: Number(t[0].gstRate) || 0 }])
+          setLineItems([{ id: t[0].id, type: 'Treatment', name: t[0].name, price: t[0].price, qty: 1, amount: t[0].price }])
         }
 
         if (!incomingPatientId && p.length > 0) {
@@ -133,7 +132,7 @@ export default function Billing() {
     if (!first) return
     setLineItems((prev) => [
       ...prev,
-      { uid: crypto.randomUUID(), id: first.id, type: kind, name: first.name, price: first.price, qty: 1, amount: first.price, gstRate: Number(first.gstRate) || 0 },
+      { uid: crypto.randomUUID(), id: first.id, type: kind, name: first.name, price: first.price, qty: 1, amount: first.price },
     ])
   }
 
@@ -158,24 +157,18 @@ export default function Billing() {
   }
 
   function selectSearchedItem(idx, option) {
-    updateItem(idx, {
-      id: option.id,
-      name: option.name,
-      price: option.price,
-      amount: option.price * lineItems[idx].qty,
-      gstRate: Number(option.gstRate) || 0,
-    })
+    updateItem(idx, { id: option.id, name: option.name, price: option.price, amount: option.price * lineItems[idx].qty })
     closeItemSearch()
   }
 
-  // Single source of truth for every GST number on this page — the on-screen Invoice
-  // Summary and the printed invoice both read from this same object, so they can never
-  // disagree. Mirrors the backend's GstCalculator.java exactly.
-  const gstCalc = useMemo(
-    () => calculateGst(lineItems, discountEnabled, discount, gstEnabled, supplyType),
-    [lineItems, discountEnabled, discount, gstEnabled, supplyType]
+  const subtotal = useMemo(
+    () => lineItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
+    [lineItems]
   )
-  const { subtotal, discountAmount, cgstAmount, sgstAmount, igstAmount, totalGst, total, rateBreakdown } = gstCalc
+  const discountAmount = discountEnabled ? (subtotal * discount) / 100 : 0
+  const taxable = subtotal - discountAmount
+  const gstAmount = gstEnabled ? taxable * GST_RATE : 0
+  const total = taxable + gstAmount
 
   useEffect(() => {
     if (!initialPaymentTouched) setInitialPaymentAmount(total)
@@ -245,12 +238,10 @@ export default function Billing() {
           price: item.price,
           qty: item.qty,
           amount: Number(item.amount) || 0,
-          gstRate: Number(item.gstRate) || 0,
         })),
         discountEnabled,
         discountPercent: discount,
         gstEnabled,
-        supplyType,
         initialPaymentAmount: Number(initialPaymentAmount) || 0,
         initialPaymentMethod,
       })
@@ -269,21 +260,12 @@ export default function Billing() {
     setPatientId(patients[0]?.id || '')
     setLineItems(
       treatmentOptions.length > 0
-        ? [{
-            id: treatmentOptions[0].id,
-            type: 'Treatment',
-            name: treatmentOptions[0].name,
-            price: treatmentOptions[0].price,
-            qty: 1,
-            amount: treatmentOptions[0].price,
-            gstRate: Number(treatmentOptions[0].gstRate) || 0,
-          }]
+        ? [{ id: treatmentOptions[0].id, type: 'Treatment', name: treatmentOptions[0].name, price: treatmentOptions[0].price, qty: 1, amount: treatmentOptions[0].price }]
         : []
     )
     setDiscountEnabled(false)
     setDiscount(0)
     setGstEnabled(false)
-    setSupplyType('Intra-State')
     setInitialPaymentTouched(false)
     setInitialPaymentMethod('UPI')
   }
@@ -398,11 +380,6 @@ export default function Billing() {
                     <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-primary-50 text-primary-700 w-fit shrink-0">
                       {item.type}
                     </span>
-                    {gstEnabled && (
-                      <span className="text-xs font-medium px-2 py-1 rounded-lg bg-gray-50 text-gray-500 w-fit shrink-0" title="GST rate for this item">
-                        GST {item.gstRate ?? 0}%
-                      </span>
-                    )}
                     <div className="relative flex-1 min-w-0">
                       {itemSearch.idx === idx ? (
                         <>
@@ -540,9 +517,7 @@ export default function Billing() {
               <div>
                 <h3 className="font-bold text-gray-800">GST</h3>
                 <p className="text-xs text-gray-400 mt-1">
-                  {gstEnabled
-                    ? "Each item's own configured GST rate is applied to its taxable amount"
-                    : 'Enable the toggle to apply GST — no CGST/SGST/IGST fields are shown while disabled'}
+                  {gstEnabled ? 'GST (18%) is applied to the taxable amount' : 'Enable the toggle to apply GST'}
                 </p>
               </div>
               <button
@@ -562,16 +537,6 @@ export default function Billing() {
                 />
               </button>
             </div>
-            {gstEnabled && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <FormField label="Supply Type" hint="Intra-State splits GST into CGST + SGST; Inter-State applies IGST instead">
-                  <Select value={supplyType} onChange={(e) => setSupplyType(e.target.value)} disabled={formLocked}>
-                    <option value="Intra-State">Intra-State (within Tamil Nadu)</option>
-                    <option value="Inter-State">Inter-State</option>
-                  </Select>
-                </FormField>
-              </div>
-            )}
           </Card>
 
           <Card>
@@ -625,10 +590,7 @@ export default function Billing() {
           <div className="space-y-2 text-sm mb-4 pb-4 border-b border-gray-100">
             {lineItems.map((item, idx) => (
               <div key={idx} className="flex justify-between text-gray-600">
-                <span className="truncate pr-2">
-                  {item.name} x{item.qty}
-                  {gstEnabled && <span className="text-xs text-gray-400"> ({item.gstRate ?? 0}% GST)</span>}
-                </span>
+                <span className="truncate pr-2">{item.name} x{item.qty}</span>
                 <span className="shrink-0">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</span>
               </div>
             ))}
@@ -643,45 +605,12 @@ export default function Billing() {
               <span>Discount ({discount}%)</span>
               <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
             </div>
-            {gstEnabled && rateBreakdown.length <= 1 && (
-              gstCalc.interState ? (
-                <div className="flex justify-between text-gray-600">
-                  <span>IGST {rateBreakdown[0] ? `@ ${rateBreakdown[0].rate}%` : ''}</span>
-                  <span>+ ₹{igstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                </div>
-              ) : (
-                <>
-                  <div className="flex justify-between text-gray-600">
-                    <span>CGST {rateBreakdown[0] ? `@ ${rateBreakdown[0].rate / 2}%` : ''}</span>
-                    <span>+ ₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>SGST {rateBreakdown[0] ? `@ ${rateBreakdown[0].rate / 2}%` : ''}</span>
-                    <span>+ ₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                  </div>
-                </>
-              )
-            )}
-            {gstEnabled && rateBreakdown.length > 1 && (
-              <div className="space-y-1 py-1">
-                {rateBreakdown.map((rg) => (
-                  <div key={rg.rate} className="flex justify-between text-gray-600 text-xs">
-                    <span>
-                      GST @{rg.rate}% {gstCalc.interState ? `(IGST ${rg.rate}%)` : `(CGST ${rg.rate / 2}% + SGST ${rg.rate / 2}%)`}
-                    </span>
-                    <span>+ ₹{rg.gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {gstEnabled && (
-              <div className="flex justify-between text-gray-600 font-medium">
-                <span>Total GST</span>
-                <span>+ ₹{totalGst.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-              </div>
-            )}
+            <div className="flex justify-between text-gray-600">
+              <span>GST {gstEnabled ? '(18%)' : '(disabled)'}</span>
+              <span>+ ₹{gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+            </div>
             <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-gray-100">
-              <span>Grand Total</span>
+              <span>Total</span>
               <span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
             </div>
           </div>
@@ -843,8 +772,7 @@ export default function Billing() {
               <tr className="border-b-2 border-gray-800 text-left text-[8px] font-semibold text-gray-500 uppercase tracking-wide">
                 <th className="py-1 pr-1 w-4">#</th>
                 <th className="py-1 pr-1">Item</th>
-                <th className="py-1 pr-1 text-right w-7">Qty</th>
-                {gstEnabled && <th className="py-1 pr-1 text-right w-8">GST%</th>}
+                <th className="py-1 pr-1 text-right w-8">Qty</th>
                 <th className="py-1 pr-1 text-right w-14">Price</th>
                 <th className="py-1 pl-1 text-right w-16">Amount</th>
               </tr>
@@ -855,7 +783,6 @@ export default function Billing() {
                   <td className="py-1 pr-1 text-gray-500 align-top">{idx + 1}</td>
                   <td className="py-1 pr-1 text-gray-800 align-top break-words">{item.name}</td>
                   <td className="py-1 pr-1 text-right text-gray-600 align-top">{item.qty}</td>
-                  {gstEnabled && <td className="py-1 pr-1 text-right text-gray-600 align-top">{item.gstRate ?? 0}%</td>}
                   <td className="py-1 pr-1 text-right text-gray-600 align-top">₹{Number(item.price || 0).toLocaleString('en-IN')}</td>
                   <td className="py-1 pl-1 text-right font-medium text-gray-800 align-top">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</td>
                 </tr>
@@ -864,7 +791,7 @@ export default function Billing() {
           </table>
 
           <div className="flex justify-end mt-2">
-            <div className="w-3/5 space-y-1">
+            <div className="w-2/5 space-y-1">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
                 <span>₹{subtotal.toLocaleString('en-IN')}</span>
@@ -873,39 +800,12 @@ export default function Billing() {
                 <span>Discount ({discount}%)</span>
                 <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
-              {gstEnabled && rateBreakdown.length <= 1 && (
-                gstCalc.interState ? (
-                  <div className="flex justify-between text-gray-600">
-                    <span>IGST {rateBreakdown[0] ? `@${rateBreakdown[0].rate}%` : ''}</span>
-                    <span>+ ₹{igstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex justify-between text-gray-600">
-                      <span>CGST {rateBreakdown[0] ? `@${rateBreakdown[0].rate / 2}%` : ''}</span>
-                      <span>+ ₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>SGST {rateBreakdown[0] ? `@${rateBreakdown[0].rate / 2}%` : ''}</span>
-                      <span>+ ₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                  </>
-                )
-              )}
-              {gstEnabled && rateBreakdown.length > 1 && rateBreakdown.map((rg) => (
-                <div key={rg.rate} className="flex justify-between text-gray-600">
-                  <span>GST @{rg.rate}% ({gstCalc.interState ? 'IGST' : 'CGST+SGST'})</span>
-                  <span>+ ₹{rg.gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                </div>
-              ))}
-              {gstEnabled && (
-                <div className="flex justify-between text-gray-600 font-medium">
-                  <span>Total GST</span>
-                  <span>+ ₹{totalGst.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                </div>
-              )}
+              <div className="flex justify-between text-gray-600">
+                <span>GST {gstEnabled ? '(18%)' : '(disabled)'}</span>
+                <span>+ ₹{gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+              </div>
               <div className="flex justify-between text-xs font-bold text-gray-900 pt-1 border-t-2 border-gray-800">
-                <span>Grand Total</span>
+                <span>Total</span>
                 <span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
             </div>
