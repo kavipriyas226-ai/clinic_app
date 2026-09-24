@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Plus, Minus, Trash2, Printer, Receipt, AlertCircle, Save, CheckCircle2, FilePlus2, Pill } from 'lucide-react'
+import { Plus, Minus, Trash2, Printer, Receipt, AlertCircle, Save, CheckCircle2, FilePlus2, Pill, MapPin, Phone, Mail, FileText, User, CreditCard, HeartPulse, PenLine } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import Button from '../components/common/Button.jsx'
@@ -711,20 +711,14 @@ export default function Billing() {
           )}
         </Card>
 
-        {/* Dedicated printable invoice — screen-hidden, print-only. Sized for A5 paper,
-            adapting automatically to whichever orientation is chosen in the print
-            dialog (@page size has no forced portrait/landscape, so the browser's own
-            Layout setting drives it; the (orientation: …) media queries below just
-            react to whichever one is active). @page margin is 0 and the container is
-            authored at the exact physical page size for that orientation; visual
-            margins come from padding on this container instead of the browser's
-            page-margin box, so the printed result doesn't depend on how a given print
-            destination (a real printer, "Microsoft Print to PDF", etc.) interprets
-            @page margin — only on box-sizing, which every browser handles identically.
-            In landscape the page is wider but shorter, so Billed To/Items/Totals and
-            Payment Details/Prescription move into two side-by-side columns instead of
-            one long stack, to keep the whole invoice on one shorter page. */}
-        <div className="hidden print:block print:text-gray-900 text-[11px] leading-snug a5-invoice p-[8mm] box-border">
+        {/* Dedicated printable invoice — screen-hidden, print-only. Sized for A5 portrait
+            paper (matching the clinic's approved invoice design), with @page size A5 and
+            zero page margin; visual margins come from padding on this container instead of
+            the browser's page-margin box, so the printed result doesn't depend on how a
+            given print destination interprets @page margin — only on box-sizing, which
+            every browser handles identically. overflow-hidden on the page root keeps the
+            absolutely-positioned corner decorations from affecting print pagination. */}
+        <div className="hidden print:block print:text-primary-900 text-[10px] leading-snug a5-invoice relative overflow-hidden p-[6mm] box-border">
           <style>{`
             @page {
               size: A5;
@@ -736,187 +730,225 @@ export default function Billing() {
                 padding: 0;
               }
             }
-            @media print and (orientation: portrait) {
-              .a5-invoice { width: 148mm; min-height: 210mm; }
-            }
-            @media print and (orientation: landscape) {
-              .a5-invoice { width: 210mm; min-height: 148mm; }
-              .a5-columns { display: flex; gap: 6mm; align-items: flex-start; }
-              .a5-columns > .a5-col { flex: 1 1 0; min-width: 0; }
-            }
+            .a5-invoice { width: 148mm; min-height: 210mm; }
           `}</style>
 
-          <div className="flex items-center justify-between gap-3 pb-2 border-b-2 border-gray-800">
-            <div className="flex items-center gap-2.5 min-w-0">
+          {/* Decorative corner leaf, top-right */}
+          <svg viewBox="0 0 120 120" className="absolute -top-4 -right-4 w-24 h-24 text-primary-200 pointer-events-none" fill="currentColor">
+            <path d="M110 10C80 5 40 20 25 55c-12 27-5 55 15 65 5-30 20-55 45-70 15-9 25-20 25-40z" />
+            <path d="M115 30c-20 5-45 20-55 45-8 20-3 40 12 48 3-22 15-42 33-55 12-9 18-20 10-38z" opacity="0.7" />
+          </svg>
+
+          {/* Header */}
+          <div className="relative flex items-start justify-between gap-3 pb-3 border-b-2 border-primary-700">
+            <div className="flex items-start gap-2.5 min-w-0">
               <img
                 src={clinicProfile?.logoDataUrl || logo}
                 alt={clinicProfile?.name || 'Clinic logo'}
-                className="w-20 h-20 object-contain shrink-0"
+                className="w-16 h-16 object-contain shrink-0 rounded-full border border-primary-200 p-0.5"
               />
               <div className="min-w-0">
-                <h1 className="text-base font-bold leading-tight">{clinicProfile?.name}</h1>
+                <h1 className="font-display font-bold text-primary-900 text-lg leading-tight">{clinicProfile?.name}</h1>
                 {clinicProfile?.tagline && (
-                  <p className="text-[9px] text-gray-500 mt-0.5 leading-snug">{clinicProfile.tagline}</p>
+                  <p className="text-[9px] font-semibold text-primary-700 mt-0.5 leading-snug">{clinicProfile.tagline}</p>
                 )}
-                <p className="text-[9px] text-gray-600 mt-1 whitespace-pre-line leading-snug">
-                  {clinicProfile?.address}
-                </p>
-                <p className="text-[9px] text-gray-600 mt-0.5 leading-snug">
-                  {[clinicProfile?.phone, clinicProfile?.email].filter(Boolean).join('  ·  ')}
-                </p>
-                {clinicProfile?.gstin && (
-                  <p className="text-[9px] text-gray-600 mt-0.5 leading-snug">GSTIN: {clinicProfile.gstin}</p>
-                )}
+                <div className="mt-1.5 space-y-0.5 text-primary-800">
+                  {clinicProfile?.address && (
+                    <p className="flex items-start gap-1 leading-snug">
+                      <MapPin size={9} className="shrink-0 mt-[1.5px] text-primary-500" />
+                      <span className="whitespace-pre-line">{clinicProfile.address}</span>
+                    </p>
+                  )}
+                  {(clinicProfile?.phone || clinicProfile?.email) && (
+                    <p className="flex items-center gap-2 leading-snug flex-wrap">
+                      {clinicProfile?.phone && (
+                        <span className="flex items-center gap-1"><Phone size={9} className="text-primary-500" />{clinicProfile.phone}</span>
+                      )}
+                      {clinicProfile?.email && (
+                        <span className="flex items-center gap-1"><Mail size={9} className="text-primary-500" />{clinicProfile.email}</span>
+                      )}
+                    </p>
+                  )}
+                  {clinicProfile?.gstin && (
+                    <p className="flex items-center gap-1 leading-snug">
+                      <FileText size={9} className="text-primary-500" /> GSTIN: {clinicProfile.gstin}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="text-right shrink-0">
-              <h2 className="text-xs font-bold uppercase tracking-wide">Invoice</h2>
-              {savedInvoice?.id ? (
-                <p className="text-[9px] text-gray-500 mt-0.5">Invoice No: <span className="font-semibold text-gray-700">{savedInvoice.id}</span></p>
-              ) : (
-                <p className="text-[9px] font-bold text-amber-600 mt-0.5 uppercase tracking-wide">Preview — Not Saved</p>
-              )}
-              <p className="text-[9px] text-gray-500 mt-0.5">
-                Date: {(printedAt || new Date()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+            <div className="shrink-0 text-right bg-primary-50 border border-primary-100 rounded-lg px-2.5 py-2 min-w-[34mm]">
+              <p className="flex items-center justify-end gap-1 font-bold text-primary-800 text-[11px] uppercase tracking-wide">
+                <FileText size={11} className="text-primary-600" /> Invoice
               </p>
-              <p className="text-[9px] text-gray-500">
-                Time: {(printedAt || new Date()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-              </p>
+              <div className="mt-1.5 space-y-0.5 text-primary-700">
+                {savedInvoice?.id ? (
+                  <p>Invoice No : <span className="font-semibold text-primary-900">{savedInvoice.id}</span></p>
+                ) : (
+                  <p className="font-bold text-amber-600 uppercase tracking-wide">Preview — Not Saved</p>
+                )}
+                <p>Date : {(printedAt || new Date()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                <p>Time : {(printedAt || new Date()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
             </div>
           </div>
 
-          <div className="a5-columns">
-          <div className="a5-col">
-          <div className="py-2">
-            <p className="text-[8px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Billed To</p>
-            <p className="text-[11px] font-semibold text-gray-800">{selectedPatient?.name}</p>
-            <p className="text-[9px] text-gray-600">Patient ID: {selectedPatient?.id}</p>
-            {selectedPatient?.phone && <p className="text-[9px] text-gray-600">{selectedPatient.phone}</p>}
+          {/* Billed To / Patient Details */}
+          <div className="mt-3 flex bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
+            <div className="flex-1 min-w-0 p-2.5">
+              <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1">
+                <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><User size={9} /></span>
+                Billed To
+              </p>
+              <p className="font-semibold text-primary-900 text-[11px]">{selectedPatient?.name}</p>
+              <p className="text-primary-700">Patient ID: {selectedPatient?.id}</p>
+              {selectedPatient?.phone && <p className="text-primary-700">Mobile: {selectedPatient.phone}</p>}
+            </div>
+            <div className="w-px bg-primary-200 my-2.5" />
+            <div className="flex-1 min-w-0 p-2.5">
+              <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1">
+                <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><User size={9} /></span>
+                Patient Details
+              </p>
+              <p className="text-primary-700">Name : <span className="font-semibold text-primary-900">{selectedPatient?.name}</span></p>
+              <p className="text-primary-700">Patient ID : {selectedPatient?.id}</p>
+              <p className="text-primary-700">Mobile : {selectedPatient?.phone || '—'}</p>
+            </div>
           </div>
 
-          <table className="w-full border-collapse table-fixed">
+          {/* Items table */}
+          <table className="w-full border-collapse table-fixed mt-3 rounded-lg overflow-hidden">
             <thead>
-              <tr className="border-b-2 border-gray-800 text-left text-[8px] font-semibold text-gray-500 uppercase tracking-wide">
-                <th className="py-1 pr-1 w-4">#</th>
-                <th className="py-1 pr-1">Item</th>
-                <th className="py-1 pr-1 text-right w-8">Qty</th>
-                <th className="py-1 pr-1 text-right w-14">Price</th>
-                <th className="py-1 pl-1 text-right w-16">Amount</th>
+              <tr className="bg-primary-700 text-white text-left text-[8px] font-semibold uppercase tracking-wide">
+                <th className="py-1.5 pl-2 pr-1 w-4">#</th>
+                <th className="py-1.5 pr-1">Item / Treatment</th>
+                <th className="py-1.5 pr-1 text-right w-8">Qty</th>
+                <th className="py-1.5 pr-1 text-right w-14">Price</th>
+                <th className="py-1.5 pr-2 text-right w-16">Amount</th>
               </tr>
             </thead>
             <tbody>
               {lineItems.map((item, idx) => (
-                <tr key={idx} className="border-b border-gray-200">
-                  <td className="py-1 pr-1 text-gray-500 align-top">{idx + 1}</td>
-                  <td className="py-1 pr-1 text-gray-800 align-top break-words">{item.name}</td>
-                  <td className="py-1 pr-1 text-right text-gray-600 align-top">{item.qty}</td>
-                  <td className="py-1 pr-1 text-right text-gray-600 align-top">₹{Number(item.price || 0).toLocaleString('en-IN')}</td>
-                  <td className="py-1 pl-1 text-right font-medium text-gray-800 align-top">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</td>
+                <tr key={idx} className="border-b border-primary-100">
+                  <td className="py-1 pl-2 pr-1 text-primary-500 align-top">{idx + 1}</td>
+                  <td className="py-1 pr-1 text-primary-900 font-medium align-top break-words">{item.name}</td>
+                  <td className="py-1 pr-1 text-right text-primary-700 align-top">{item.qty}</td>
+                  <td className="py-1 pr-1 text-right text-primary-700 align-top">₹{Number(item.price || 0).toLocaleString('en-IN')}</td>
+                  <td className="py-1 pr-2 text-right font-semibold text-primary-900 align-top">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <div className="flex justify-end mt-2">
-            <div className="w-2/5 space-y-1">
-              <div className="flex justify-between text-gray-600">
-                <span>Subtotal</span>
-                <span>₹{subtotal.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Discount ({discount}%)</span>
-                <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-              </div>
-              {gstEnabled ? (
-                <>
-                  <div className="flex justify-between text-gray-600">
-                    <span>CGST (9%)</span>
-                    <span>+ ₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>SGST (9%)</span>
-                    <span>+ ₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                  </div>
-                </>
-              ) : (
-                <div className="flex justify-between text-gray-500">
-                  <span>GST</span>
-                  <span>Not applied</span>
+          {/* Totals */}
+          <div className="flex justify-end mt-2.5">
+            <div className="w-3/5 bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
+              <div className="p-2 space-y-1 text-primary-700">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span className="font-medium text-primary-900">₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
-              )}
-              <div className="flex justify-between text-xs font-bold text-gray-900 pt-1 border-t-2 border-gray-800">
+                <div className="flex justify-between">
+                  <span>Discount ({discount}%)</span>
+                  <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                </div>
+                {gstEnabled ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span>CGST @ 9%</span>
+                      <span>₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>SGST @ 9%</span>
+                      <span>₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between text-primary-400">
+                    <span>GST</span>
+                    <span>Not applied</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-between items-center bg-primary-700 text-white font-bold text-[11px] px-2 py-1.5">
                 <span>Total</span>
                 <span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
             </div>
           </div>
+
+          {/* Payment Details */}
+          <div className="mt-3 flex bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
+            <div className="flex-1 min-w-0 p-2.5">
+              <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1.5">
+                <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><CreditCard size={9} /></span>
+                Payment Details
+              </p>
+              <div className="space-y-0.5 text-primary-700">
+                <div className="flex justify-between gap-2"><span>Total Treatment Amount</span><span className="font-semibold text-primary-900">₹{paymentDetails.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
+                <div className="flex justify-between gap-2"><span>Amount Paid</span><span className="font-semibold text-primary-900">₹{paymentDetails.amountPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
+                <div className="flex justify-between gap-2"><span>Remaining Balance</span><span className="font-semibold text-primary-900">₹{paymentDetails.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
+                <div className="flex justify-between gap-2"><span>Payment Status</span><span className="font-bold text-primary-900">{paymentDetails.status}</span></div>
+                <div className="flex justify-between gap-2"><span>Payment Method</span><span className="font-semibold text-primary-900">{paymentDetails.method}</span></div>
+              </div>
+            </div>
+            <div className="w-px bg-primary-200 my-2.5" />
+            <div className="w-[30mm] shrink-0 flex flex-col items-center justify-center gap-1 p-2 text-center">
+              <span className="w-8 h-8 rounded-full border-2 border-primary-500 text-primary-600 flex items-center justify-center">
+                <HeartPulse size={15} />
+              </span>
+              <p className="text-primary-700 font-semibold leading-tight">Your Skin<br />Our Priority</p>
+            </div>
           </div>
 
-          <div className="a5-col">
-          <div className="pt-2 border-t-2 border-gray-800">
-            <h3 className="text-[8px] font-semibold uppercase tracking-wide text-gray-500 mb-1">Payment Details</h3>
-            <table className="w-full border-collapse">
-              <tbody>
-                <tr className="border-b border-gray-200">
-                  <td className="py-0.5 pr-1 text-gray-600">Total Treatment Amount</td>
-                  <td className="py-0.5 pl-1 text-right font-semibold text-gray-800">₹{paymentDetails.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="py-0.5 pr-1 text-gray-600">Amount Paid</td>
-                  <td className="py-0.5 pl-1 text-right font-semibold text-gray-800">₹{paymentDetails.amountPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="py-0.5 pr-1 text-gray-600">Remaining Balance</td>
-                  <td className="py-0.5 pl-1 text-right font-semibold text-gray-800">₹{paymentDetails.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="py-0.5 pr-1 text-gray-600">Payment Status</td>
-                  <td className="py-0.5 pl-1 text-right font-semibold text-gray-800">{paymentDetails.status}</td>
-                </tr>
-                <tr>
-                  <td className="py-0.5 pr-1 text-gray-600">Payment Method</td>
-                  <td className="py-0.5 pl-1 text-right font-semibold text-gray-800">{paymentDetails.method}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
+          {/* Prescription */}
           {patientPrescription && (
-            <div className="mt-3 pt-2 border-t-2 border-gray-800">
-              <h3 className="text-[8px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
+            <div className="mt-3 bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
+              <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide p-2.5 pb-1.5">
+                <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><Pill size={9} /></span>
                 Prescription — {patientPrescription.id}
-              </h3>
+              </p>
               {patientPrescription.items.length > 0 ? (
                 <table className="w-full border-collapse table-fixed">
                   <thead>
-                    <tr className="border-b border-gray-300 text-left text-[8px] font-semibold text-gray-500 uppercase tracking-wide">
-                      <th className="py-0.5 pr-1 w-[28%]">Medicine</th>
-                      <th className="py-0.5 px-1 w-[24%]">Dosage</th>
-                      <th className="py-0.5 px-1 w-[24%]">Frequency</th>
-                      <th className="py-0.5 pl-1 w-[24%]">Duration</th>
+                    <tr className="border-y border-primary-200 text-left text-[8px] font-semibold text-primary-600 uppercase tracking-wide bg-primary-100/60">
+                      <th className="py-1 pl-2.5 pr-1 w-[28%]">Medicine</th>
+                      <th className="py-1 px-1 w-[24%]">Dosage</th>
+                      <th className="py-1 px-1 w-[24%]">Frequency</th>
+                      <th className="py-1 pr-2.5 w-[24%]">Duration</th>
                     </tr>
                   </thead>
                   <tbody>
                     {patientPrescription.items.map((it, i) => (
-                      <tr key={i} className="border-b border-gray-100">
-                        <td className="py-0.5 pr-1 text-gray-800 break-words">{it.name}</td>
-                        <td className="py-0.5 px-1 text-gray-600 break-words">{it.dosage}</td>
-                        <td className="py-0.5 px-1 text-gray-600 break-words">{it.frequency}</td>
-                        <td className="py-0.5 pl-1 text-gray-600 break-words">{it.duration}</td>
+                      <tr key={i} className="border-b border-primary-100 last:border-0">
+                        <td className="py-1 pl-2.5 pr-1 text-primary-900 break-words">{it.name}</td>
+                        <td className="py-1 px-1 text-primary-700 break-words">{it.dosage}</td>
+                        <td className="py-1 px-1 text-primary-700 break-words">{it.frequency}</td>
+                        <td className="py-1 pr-2.5 text-primary-700 break-words">{it.duration}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
-                <p className="text-[9px] text-gray-400">No medicines listed on this prescription.</p>
+                <p className="text-primary-400 px-2.5 pb-2">No medicines listed on this prescription.</p>
               )}
             </div>
           )}
-          </div>
-          </div>
 
-          <div className="mt-4 pt-2 border-t border-gray-200 text-center text-[8px] text-gray-400">
-            Thank you for visiting {clinicProfile?.name}. Wishing you good health.
+          {/* Footer */}
+          <div className="relative mt-4 pt-3 border-t border-primary-100 flex items-end justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="font-script text-primary-700 text-xl leading-none shrink-0">Thank you</p>
+              <p className="text-primary-500 leading-snug">
+                Thank you for visiting {clinicProfile?.name}.<br />Wishing you good health.
+              </p>
+            </div>
+            <div className="shrink-0 text-center">
+              <div className="flex items-center gap-1 text-primary-400 border-b border-primary-300 pb-3 w-[30mm] justify-center">
+                <PenLine size={10} />
+              </div>
+              <p className="text-primary-500 mt-0.5">Authorized Signature</p>
+            </div>
           </div>
         </div>
       </div>
