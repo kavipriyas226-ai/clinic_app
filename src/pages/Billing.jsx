@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Plus, Minus, Trash2, Printer, Receipt, AlertCircle, Save, CheckCircle2, FilePlus2, Pill, MapPin, Phone, Mail, FileText, User, CreditCard, HeartPulse, PenLine } from 'lucide-react'
 import Card from '../components/common/Card.jsx'
@@ -31,6 +31,274 @@ function buildLineItemsFromBill(billItems, inventory) {
     }
   })
 }
+
+// --- Printable invoice building blocks -------------------------------------------------
+// Shared between the real (visible-when-printing) pages and the invisible measurement
+// probe below, so a block's measured height always matches what actually gets printed.
+
+function InvoiceHeader({ clinicProfile, logoSrc, savedInvoice, printedAt }) {
+  return (
+    <div className="relative flex items-start justify-between gap-3 pb-3 border-b-2 border-primary-700">
+      <div className="flex items-start gap-2.5 min-w-0">
+        <img
+          src={logoSrc}
+          alt={clinicProfile?.name || 'Clinic logo'}
+          className="w-16 h-16 object-contain shrink-0 rounded-full border border-primary-200 p-0.5"
+        />
+        <div className="min-w-0">
+          <h1 className="font-display font-bold text-primary-900 text-lg leading-tight">{clinicProfile?.name}</h1>
+          {clinicProfile?.tagline && (
+            <p className="text-[9px] font-semibold text-primary-700 mt-0.5 leading-snug">{clinicProfile.tagline}</p>
+          )}
+          <div className="mt-1.5 space-y-0.5 text-primary-800">
+            {clinicProfile?.address && (
+              <p className="flex items-start gap-1 leading-snug">
+                <MapPin size={9} className="shrink-0 mt-[1.5px] text-primary-500" />
+                <span className="whitespace-pre-line">{clinicProfile.address}</span>
+              </p>
+            )}
+            {(clinicProfile?.phone || clinicProfile?.email) && (
+              <p className="flex items-center gap-2 leading-snug flex-wrap">
+                {clinicProfile?.phone && (
+                  <span className="flex items-center gap-1"><Phone size={9} className="text-primary-500" />{clinicProfile.phone}</span>
+                )}
+                {clinicProfile?.email && (
+                  <span className="flex items-center gap-1"><Mail size={9} className="text-primary-500" />{clinicProfile.email}</span>
+                )}
+              </p>
+            )}
+            {clinicProfile?.gstin && (
+              <p className="flex items-center gap-1 leading-snug">
+                <FileText size={9} className="text-primary-500" /> GSTIN: {clinicProfile.gstin}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="shrink-0 text-right bg-primary-50 border border-primary-100 rounded-lg px-2.5 py-2 min-w-[34mm]">
+        <p className="flex items-center justify-end gap-1 font-bold text-primary-800 text-[11px] uppercase tracking-wide">
+          <FileText size={11} className="text-primary-600" /> Invoice
+        </p>
+        <div className="mt-1.5 space-y-0.5 text-primary-700">
+          {savedInvoice?.id ? (
+            <p>Invoice No : <span className="font-semibold text-primary-900">{savedInvoice.id}</span></p>
+          ) : (
+            <p className="font-bold text-amber-600 uppercase tracking-wide">Preview — Not Saved</p>
+          )}
+          <p>Date : {(printedAt || new Date()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+          <p>Time : {(printedAt || new Date()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BilledToPatient({ selectedPatient }) {
+  return (
+    <div className="mt-3 flex bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
+      <div className="flex-1 min-w-0 p-2.5">
+        <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1">
+          <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><User size={9} /></span>
+          Billed To
+        </p>
+        <p className="font-semibold text-primary-900 text-[11px]">{selectedPatient?.name}</p>
+        <p className="text-primary-700">Patient ID: {selectedPatient?.id}</p>
+        {selectedPatient?.phone && <p className="text-primary-700">Mobile: {selectedPatient.phone}</p>}
+      </div>
+      <div className="w-px bg-primary-200 my-2.5" />
+      <div className="flex-1 min-w-0 p-2.5">
+        <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1">
+          <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><User size={9} /></span>
+          Patient Details
+        </p>
+        <p className="text-primary-700">Name : <span className="font-semibold text-primary-900">{selectedPatient?.name}</span></p>
+        <p className="text-primary-700">Patient ID : {selectedPatient?.id}</p>
+        <p className="text-primary-700">Mobile : {selectedPatient?.phone || '—'}</p>
+      </div>
+    </div>
+  )
+}
+
+function ItemsTable({ rows, theadRef, getRowRef }) {
+  return (
+    <table className="w-full border-collapse table-fixed mt-3 rounded-lg overflow-hidden">
+      <thead ref={theadRef}>
+        <tr className="bg-primary-700 text-white text-left text-[8px] font-semibold uppercase tracking-wide">
+          <th className="py-1.5 pl-2 pr-1 w-7">#</th>
+          <th className="py-1.5 pr-1">Item / Treatment</th>
+          <th className="py-1.5 pr-1 text-right w-8">Qty</th>
+          <th className="py-1.5 pr-1 text-right w-14">Price</th>
+          <th className="py-1.5 pr-2 text-right w-16">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(({ item, idx }) => (
+          <tr key={idx} ref={getRowRef ? (el) => getRowRef(idx, el) : undefined} className="border-b border-primary-100">
+            <td className="py-1 pl-2 pr-1 text-primary-500 align-top">{idx + 1}</td>
+            <td className="py-1 pr-1 text-primary-900 font-medium align-top break-words">{item.name}</td>
+            <td className="py-1 pr-1 text-right text-primary-700 align-top">{item.qty}</td>
+            <td className="py-1 pr-1 text-right text-primary-700 align-top">₹{Number(item.price || 0).toLocaleString('en-IN')}</td>
+            <td className="py-1 pr-2 text-right font-semibold text-primary-900 align-top">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function ClosingSummary({ subtotal, discount, discountAmount, gstEnabled, cgstAmount, sgstAmount, total, paymentDetails, patientPrescription, clinicProfile }) {
+  return (
+    <>
+      {/* Totals */}
+      <div className="flex justify-end mt-2.5">
+        <div className="w-3/5 bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
+          <div className="p-2 space-y-1 text-primary-700">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span className="font-medium text-primary-900">₹{subtotal.toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Discount ({discount}%)</span>
+              <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+            </div>
+            {gstEnabled ? (
+              <>
+                <div className="flex justify-between">
+                  <span>CGST @ 9%</span>
+                  <span>₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>SGST @ 9%</span>
+                  <span>₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between text-primary-400">
+                <span>GST</span>
+                <span>Not applied</span>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between items-center bg-primary-700 text-white font-bold text-[11px] px-2 py-1.5">
+            <span>Total</span>
+            <span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Details */}
+      <div className="mt-3 flex bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
+        <div className="flex-1 min-w-0 p-2.5">
+          <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1.5">
+            <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><CreditCard size={9} /></span>
+            Payment Details
+          </p>
+          <div className="space-y-0.5 text-primary-700">
+            <div className="flex justify-between gap-2"><span>Total Treatment Amount</span><span className="font-semibold text-primary-900">₹{paymentDetails.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
+            <div className="flex justify-between gap-2"><span>Amount Paid</span><span className="font-semibold text-primary-900">₹{paymentDetails.amountPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
+            <div className="flex justify-between gap-2"><span>Remaining Balance</span><span className="font-semibold text-primary-900">₹{paymentDetails.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
+            <div className="flex justify-between gap-2"><span>Payment Status</span><span className="font-bold text-primary-900">{paymentDetails.status}</span></div>
+            <div className="flex justify-between gap-2"><span>Payment Method</span><span className="font-semibold text-primary-900">{paymentDetails.method}</span></div>
+          </div>
+        </div>
+        <div className="w-px bg-primary-200 my-2.5" />
+        <div className="w-[30mm] shrink-0 flex flex-col items-center justify-center gap-1 p-2 text-center">
+          <span className="w-8 h-8 rounded-full border-2 border-primary-500 text-primary-600 flex items-center justify-center">
+            <HeartPulse size={15} />
+          </span>
+          <p className="text-primary-700 font-semibold leading-tight">Your Skin<br />Our Priority</p>
+        </div>
+      </div>
+
+      {/* Prescription */}
+      {patientPrescription && (
+        <div className="mt-3 bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
+          <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide p-2.5 pb-1.5">
+            <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><Pill size={9} /></span>
+            Prescription — {patientPrescription.id}
+          </p>
+          {patientPrescription.items.length > 0 ? (
+            <table className="w-full border-collapse table-fixed">
+              <thead>
+                <tr className="border-y border-primary-200 text-left text-[8px] font-semibold text-primary-600 uppercase tracking-wide bg-primary-100/60">
+                  <th className="py-1 pl-2.5 pr-1 w-[28%]">Medicine</th>
+                  <th className="py-1 px-1 w-[24%]">Dosage</th>
+                  <th className="py-1 px-1 w-[24%]">Frequency</th>
+                  <th className="py-1 pr-2.5 w-[24%]">Duration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {patientPrescription.items.map((it, i) => (
+                  <tr key={i} className="border-b border-primary-100 last:border-0">
+                    <td className="py-1 pl-2.5 pr-1 text-primary-900 break-words">{it.name}</td>
+                    <td className="py-1 px-1 text-primary-700 break-words">{it.dosage}</td>
+                    <td className="py-1 px-1 text-primary-700 break-words">{it.frequency}</td>
+                    <td className="py-1 pr-2.5 text-primary-700 break-words">{it.duration}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-primary-400 px-2.5 pb-2">No medicines listed on this prescription.</p>
+          )}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="relative mt-4 pt-3 border-t border-primary-100 flex items-end justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <p className="font-script text-primary-700 text-xl leading-none shrink-0">Thank you</p>
+          <p className="text-primary-500 leading-snug">
+            Thank you for visiting {clinicProfile?.name}.<br />Wishing you good health.
+          </p>
+        </div>
+        <div className="shrink-0 text-center">
+          <div className="flex items-center gap-1 text-primary-400 border-b border-primary-300 pb-3 w-[30mm] justify-center">
+            <PenLine size={10} />
+          </div>
+          <p className="text-primary-500 mt-0.5">Authorized Signature</p>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function PageNumberFooter({ pageNum, pageCount }) {
+  if (pageCount <= 1) return null
+  return (
+    <div className="mt-3 pt-1.5 border-t border-primary-100 text-center text-primary-400">
+      Page {pageNum} of {pageCount}
+    </div>
+  )
+}
+
+function InvoicePage({ pageNum, pageCount, isFirst, isLast, rows, clinicProfile, logoSrc, savedInvoice, printedAt, selectedPatient, closingProps }) {
+  return (
+    <div
+      className={`a5-invoice relative overflow-hidden p-[6mm] box-border print:text-primary-900 text-[10px] leading-snug${!isLast ? ' a5-page-break' : ''}`}
+    >
+      <svg viewBox="0 0 120 120" className="absolute -top-4 -right-4 w-24 h-24 text-primary-200 pointer-events-none" fill="currentColor">
+        <path d="M110 10C80 5 40 20 25 55c-12 27-5 55 15 65 5-30 20-55 45-70 15-9 25-20 25-40z" />
+        <path d="M115 30c-20 5-45 20-55 45-8 20-3 40 12 48 3-22 15-42 33-55 12-9 18-20 10-38z" opacity="0.7" />
+      </svg>
+
+      <InvoiceHeader clinicProfile={clinicProfile} logoSrc={logoSrc} savedInvoice={savedInvoice} printedAt={printedAt} />
+      {isFirst && <BilledToPatient selectedPatient={selectedPatient} />}
+      {rows.length > 0 && <ItemsTable rows={rows} />}
+      {isLast && <ClosingSummary {...closingProps} />}
+      <PageNumberFooter pageNum={pageNum} pageCount={pageCount} />
+    </div>
+  )
+}
+
+const MM_TO_PX = 96 / 25.4
+const PAGE_HEIGHT_PX = 210 * MM_TO_PX
+const PAGE_PADDING_PX = 6 * MM_TO_PX
+// Small buffer against residual sub-pixel/font-hinting differences between the measurement
+// probe and the real printed page. The structural gaps between blocks (margins) are already
+// accounted for explicitly/via overflow-hidden wrappers, so this only needs to be small.
+const PAGE_SAFETY_PX = 16
+const PAGE_CONTENT_BUDGET_PX = PAGE_HEIGHT_PX - PAGE_PADDING_PX * 2 - PAGE_SAFETY_PX
 
 export default function Billing() {
   const location = useLocation()
@@ -186,15 +454,102 @@ export default function Billing() {
   const draftStatus = draftAmountPaid <= 0 ? 'Pending' : draftBalance <= 0 ? 'Fully Paid' : 'Partially Paid'
   const draftMethod = draftAmountPaid > 0 ? initialPaymentMethod : '—'
 
-  const paymentDetails = formLocked
-    ? {
-        total: savedInvoice.total,
-        amountPaid: savedInvoice.amountPaid,
-        balance: savedInvoice.balance,
-        status: savedInvoice.status,
-        method: savedInvoice.method,
+  const paymentDetails = useMemo(
+    () =>
+      formLocked
+        ? {
+            total: savedInvoice.total,
+            amountPaid: savedInvoice.amountPaid,
+            balance: savedInvoice.balance,
+            status: savedInvoice.status,
+            method: savedInvoice.method,
+          }
+        : { total, amountPaid: draftAmountPaid, balance: draftBalance, status: draftStatus, method: draftMethod },
+    [formLocked, savedInvoice, total, draftAmountPaid, draftBalance, draftStatus, draftMethod]
+  )
+
+  // --- Print pagination ---------------------------------------------------------------
+  // The printed invoice must flow across as many A5 pages as the content needs (many line
+  // items, a long prescription, etc.) without shrinking or cutting anything. Since the
+  // browser's native print pagination can't be told "repeat this header on every page" or
+  // "never split a table row," we measure the real, fully-styled blocks in an invisible
+  // off-screen probe and lay out the page breaks ourselves, then render one explicit
+  // .a5-invoice div per physical page.
+  const logoSrc = clinicProfile?.logoDataUrl || logo
+  const rowsWithIdx = useMemo(() => lineItems.map((item, idx) => ({ item, idx })), [lineItems])
+  const closingProps = { subtotal, discount, discountAmount, gstEnabled, cgstAmount, sgstAmount, total, paymentDetails, patientPrescription, clinicProfile }
+
+  const probeHeaderRef = useRef(null)
+  const probeBilledToRef = useRef(null)
+  const probeTheadRef = useRef(null)
+  const probeClosingRef = useRef(null)
+  const probeFooterRef = useRef(null)
+  const probeRowRefs = useRef({})
+
+  const [invoicePages, setInvoicePages] = useState(() => [{ rows: rowsWithIdx, isFirst: true, isLast: true }])
+
+  // Custom web fonts (Inter/Playfair Display/Dancing Script) load asynchronously; measuring
+  // before they're ready would use fallback-font metrics and under-count row heights, so the
+  // real page could reflow taller than planned once the real fonts swap in. Re-measure once
+  // fonts are actually ready.
+  const [fontsReady, setFontsReady] = useState(false)
+  useEffect(() => {
+    document.fonts?.ready?.then(() => setFontsReady(true))
+  }, [])
+
+  useEffect(() => {
+    const headerH = probeHeaderRef.current?.getBoundingClientRect().height || 0
+    const billedToH = probeBilledToRef.current?.getBoundingClientRect().height || 0
+    const theadH = probeTheadRef.current?.getBoundingClientRect().height || 0
+    const closingH = probeClosingRef.current?.getBoundingClientRect().height || 0
+    // The "Page X of Y" footer only renders once there's more than one page — reserving its
+    // height unconditionally would force content that actually fits on one page to split
+    // unnecessarily just to make room for a footer that would never appear. So layoutPages()
+    // is run first assuming no footer; only if that genuinely needs more than one page is it
+    // re-run reserving the footer's height (which never turns a multi-page result back into a
+    // single page, since reserving more space only ever tightens the budget).
+    const pageFooterH = probeFooterRef.current?.getBoundingClientRect().height || 0
+    const rowHeights = rowsWithIdx.map(({ idx }) => probeRowRefs.current[idx]?.getBoundingClientRect().height || 0)
+    // The items table's own leading margin (Tailwind mt-3) is a true gap between top-level
+    // flow siblings (table vs. whatever precedes it) — not captured by any single block's own
+    // measured height, so it's added explicitly whenever a page has rows.
+    const tableGap = rowsWithIdx.length > 0 ? 12 : 0
+
+    function layoutPages(footerReserve) {
+      const workingBudget = PAGE_CONTENT_BUDGET_PX - footerReserve
+      const result = []
+      let currentRows = []
+      let currentHeight = headerH + billedToH + tableGap + (rowsWithIdx.length > 0 ? theadH : 0)
+
+      rowsWithIdx.forEach((row, i) => {
+        const rh = rowHeights[i]
+        if (currentHeight + rh > workingBudget && currentRows.length > 0) {
+          result.push({ rows: currentRows })
+          currentRows = []
+          currentHeight = headerH + tableGap + theadH
+        }
+        currentRows.push(row)
+        currentHeight += rh
+      })
+
+      if (currentHeight + closingH <= workingBudget) {
+        result.push({ rows: currentRows, closingHere: true })
+      } else {
+        result.push({ rows: currentRows, closingHere: false })
+        result.push({ rows: [], closingHere: true })
       }
-    : { total, amountPaid: draftAmountPaid, balance: draftBalance, status: draftStatus, method: draftMethod }
+      return result
+    }
+
+    let pages = layoutPages(0)
+    if (pages.length > 1) {
+      pages = layoutPages(pageFooterH)
+    }
+
+    setInvoicePages(
+      pages.map((p, i) => ({ rows: p.rows, isFirst: i === 0, isLast: i === pages.length - 1 }))
+    )
+  }, [rowsWithIdx, selectedPatient, clinicProfile, patientPrescription, savedInvoice, printedAt, subtotal, discount, discountAmount, gstEnabled, cgstAmount, sgstAmount, total, paymentDetails, fontsReady])
 
   function validateForm() {
     if (!patientId || lineItems.length === 0) {
@@ -711,14 +1066,16 @@ export default function Billing() {
           )}
         </Card>
 
-        {/* Dedicated printable invoice — screen-hidden, print-only. Sized for A5 portrait
-            paper (matching the clinic's approved invoice design), with @page size A5 and
-            zero page margin; visual margins come from padding on this container instead of
-            the browser's page-margin box, so the printed result doesn't depend on how a
-            given print destination interprets @page margin — only on box-sizing, which
-            every browser handles identically. overflow-hidden on the page root keeps the
-            absolutely-positioned corner decorations from affecting print pagination. */}
-        <div className="hidden print:block print:text-primary-900 text-[10px] leading-snug a5-invoice relative overflow-hidden p-[6mm] box-border">
+        {/* Dedicated printable invoice — screen-hidden, print-only. Flows across as many A5
+            portrait pages as the content needs: rendered as one explicit .a5-invoice div per
+            physical page (computed by the measurement probe below), each with a5-page-break
+            forcing a hard page break after it except the last. @page size is A5 with zero
+            margin; visual margins come from padding on each page div instead of the browser's
+            page-margin box, so the printed result doesn't depend on how a given print
+            destination interprets @page margin — only on box-sizing, which every browser
+            handles identically. overflow-hidden on each page root keeps the absolutely-
+            positioned corner decoration from affecting pagination. */}
+        <div className="hidden print:block">
           <style>{`
             @page {
               size: A5;
@@ -731,223 +1088,55 @@ export default function Billing() {
               }
             }
             .a5-invoice { width: 148mm; min-height: 210mm; }
+            .a5-page-break { break-after: page; page-break-after: always; }
           `}</style>
 
-          {/* Decorative corner leaf, top-right */}
-          <svg viewBox="0 0 120 120" className="absolute -top-4 -right-4 w-24 h-24 text-primary-200 pointer-events-none" fill="currentColor">
-            <path d="M110 10C80 5 40 20 25 55c-12 27-5 55 15 65 5-30 20-55 45-70 15-9 25-20 25-40z" />
-            <path d="M115 30c-20 5-45 20-55 45-8 20-3 40 12 48 3-22 15-42 33-55 12-9 18-20 10-38z" opacity="0.7" />
-          </svg>
+          {invoicePages.map((page, i) => (
+            <InvoicePage
+              key={i}
+              pageNum={i + 1}
+              pageCount={invoicePages.length}
+              isFirst={page.isFirst}
+              isLast={page.isLast}
+              rows={page.rows}
+              clinicProfile={clinicProfile}
+              logoSrc={logoSrc}
+              savedInvoice={savedInvoice}
+              printedAt={printedAt}
+              selectedPatient={selectedPatient}
+              closingProps={closingProps}
+            />
+          ))}
+        </div>
 
-          {/* Header */}
-          <div className="relative flex items-start justify-between gap-3 pb-3 border-b-2 border-primary-700">
-            <div className="flex items-start gap-2.5 min-w-0">
-              <img
-                src={clinicProfile?.logoDataUrl || logo}
-                alt={clinicProfile?.name || 'Clinic logo'}
-                className="w-16 h-16 object-contain shrink-0 rounded-full border border-primary-200 p-0.5"
-              />
-              <div className="min-w-0">
-                <h1 className="font-display font-bold text-primary-900 text-lg leading-tight">{clinicProfile?.name}</h1>
-                {clinicProfile?.tagline && (
-                  <p className="text-[9px] font-semibold text-primary-700 mt-0.5 leading-snug">{clinicProfile.tagline}</p>
-                )}
-                <div className="mt-1.5 space-y-0.5 text-primary-800">
-                  {clinicProfile?.address && (
-                    <p className="flex items-start gap-1 leading-snug">
-                      <MapPin size={9} className="shrink-0 mt-[1.5px] text-primary-500" />
-                      <span className="whitespace-pre-line">{clinicProfile.address}</span>
-                    </p>
-                  )}
-                  {(clinicProfile?.phone || clinicProfile?.email) && (
-                    <p className="flex items-center gap-2 leading-snug flex-wrap">
-                      {clinicProfile?.phone && (
-                        <span className="flex items-center gap-1"><Phone size={9} className="text-primary-500" />{clinicProfile.phone}</span>
-                      )}
-                      {clinicProfile?.email && (
-                        <span className="flex items-center gap-1"><Mail size={9} className="text-primary-500" />{clinicProfile.email}</span>
-                      )}
-                    </p>
-                  )}
-                  {clinicProfile?.gstin && (
-                    <p className="flex items-center gap-1 leading-snug">
-                      <FileText size={9} className="text-primary-500" /> GSTIN: {clinicProfile.gstin}
-                    </p>
-                  )}
-                </div>
-              </div>
+        {/* Invisible measurement probe — never shown on screen or in print. Renders every
+            block at the exact same width/styling as a real printed page so we can read back
+            real pixel heights (header, billed-to panel, table header row, every item row,
+            and the whole closing summary) and decide where page breaks need to go. */}
+        <div className="invisible fixed top-0 left-0 -z-50 print:hidden" aria-hidden="true">
+          <div className="w-[148mm] p-[6mm] box-border text-[10px] leading-snug">
+            {/* overflow-hidden on each measurement wrapper matters: without it, a wrapped
+                block's own leading margin (e.g. BilledToPatient's mt-3) collapses through the
+                padding-less wrapper div and escapes the measurement instead of counting toward
+                its height. */}
+            <div ref={probeHeaderRef} className="overflow-hidden">
+              <InvoiceHeader clinicProfile={clinicProfile} logoSrc={logoSrc} savedInvoice={savedInvoice} printedAt={printedAt} />
             </div>
-            <div className="shrink-0 text-right bg-primary-50 border border-primary-100 rounded-lg px-2.5 py-2 min-w-[34mm]">
-              <p className="flex items-center justify-end gap-1 font-bold text-primary-800 text-[11px] uppercase tracking-wide">
-                <FileText size={11} className="text-primary-600" /> Invoice
-              </p>
-              <div className="mt-1.5 space-y-0.5 text-primary-700">
-                {savedInvoice?.id ? (
-                  <p>Invoice No : <span className="font-semibold text-primary-900">{savedInvoice.id}</span></p>
-                ) : (
-                  <p className="font-bold text-amber-600 uppercase tracking-wide">Preview — Not Saved</p>
-                )}
-                <p>Date : {(printedAt || new Date()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                <p>Time : {(printedAt || new Date()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
-              </div>
+            <div ref={probeBilledToRef} className="overflow-hidden">
+              <BilledToPatient selectedPatient={selectedPatient} />
             </div>
-          </div>
-
-          {/* Billed To / Patient Details */}
-          <div className="mt-3 flex bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
-            <div className="flex-1 min-w-0 p-2.5">
-              <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1">
-                <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><User size={9} /></span>
-                Billed To
-              </p>
-              <p className="font-semibold text-primary-900 text-[11px]">{selectedPatient?.name}</p>
-              <p className="text-primary-700">Patient ID: {selectedPatient?.id}</p>
-              {selectedPatient?.phone && <p className="text-primary-700">Mobile: {selectedPatient.phone}</p>}
+            <ItemsTable
+              rows={rowsWithIdx}
+              theadRef={probeTheadRef}
+              getRowRef={(idx, el) => {
+                probeRowRefs.current[idx] = el
+              }}
+            />
+            <div ref={probeClosingRef} className="overflow-hidden">
+              <ClosingSummary {...closingProps} />
             </div>
-            <div className="w-px bg-primary-200 my-2.5" />
-            <div className="flex-1 min-w-0 p-2.5">
-              <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1">
-                <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><User size={9} /></span>
-                Patient Details
-              </p>
-              <p className="text-primary-700">Name : <span className="font-semibold text-primary-900">{selectedPatient?.name}</span></p>
-              <p className="text-primary-700">Patient ID : {selectedPatient?.id}</p>
-              <p className="text-primary-700">Mobile : {selectedPatient?.phone || '—'}</p>
-            </div>
-          </div>
-
-          {/* Items table */}
-          <table className="w-full border-collapse table-fixed mt-3 rounded-lg overflow-hidden">
-            <thead>
-              <tr className="bg-primary-700 text-white text-left text-[8px] font-semibold uppercase tracking-wide">
-                <th className="py-1.5 pl-2 pr-1 w-4">#</th>
-                <th className="py-1.5 pr-1">Item / Treatment</th>
-                <th className="py-1.5 pr-1 text-right w-8">Qty</th>
-                <th className="py-1.5 pr-1 text-right w-14">Price</th>
-                <th className="py-1.5 pr-2 text-right w-16">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lineItems.map((item, idx) => (
-                <tr key={idx} className="border-b border-primary-100">
-                  <td className="py-1 pl-2 pr-1 text-primary-500 align-top">{idx + 1}</td>
-                  <td className="py-1 pr-1 text-primary-900 font-medium align-top break-words">{item.name}</td>
-                  <td className="py-1 pr-1 text-right text-primary-700 align-top">{item.qty}</td>
-                  <td className="py-1 pr-1 text-right text-primary-700 align-top">₹{Number(item.price || 0).toLocaleString('en-IN')}</td>
-                  <td className="py-1 pr-2 text-right font-semibold text-primary-900 align-top">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Totals */}
-          <div className="flex justify-end mt-2.5">
-            <div className="w-3/5 bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
-              <div className="p-2 space-y-1 text-primary-700">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span className="font-medium text-primary-900">₹{subtotal.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Discount ({discount}%)</span>
-                  <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                </div>
-                {gstEnabled ? (
-                  <>
-                    <div className="flex justify-between">
-                      <span>CGST @ 9%</span>
-                      <span>₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>SGST @ 9%</span>
-                      <span>₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex justify-between text-primary-400">
-                    <span>GST</span>
-                    <span>Not applied</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-between items-center bg-primary-700 text-white font-bold text-[11px] px-2 py-1.5">
-                <span>Total</span>
-                <span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Details */}
-          <div className="mt-3 flex bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
-            <div className="flex-1 min-w-0 p-2.5">
-              <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1.5">
-                <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><CreditCard size={9} /></span>
-                Payment Details
-              </p>
-              <div className="space-y-0.5 text-primary-700">
-                <div className="flex justify-between gap-2"><span>Total Treatment Amount</span><span className="font-semibold text-primary-900">₹{paymentDetails.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
-                <div className="flex justify-between gap-2"><span>Amount Paid</span><span className="font-semibold text-primary-900">₹{paymentDetails.amountPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
-                <div className="flex justify-between gap-2"><span>Remaining Balance</span><span className="font-semibold text-primary-900">₹{paymentDetails.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
-                <div className="flex justify-between gap-2"><span>Payment Status</span><span className="font-bold text-primary-900">{paymentDetails.status}</span></div>
-                <div className="flex justify-between gap-2"><span>Payment Method</span><span className="font-semibold text-primary-900">{paymentDetails.method}</span></div>
-              </div>
-            </div>
-            <div className="w-px bg-primary-200 my-2.5" />
-            <div className="w-[30mm] shrink-0 flex flex-col items-center justify-center gap-1 p-2 text-center">
-              <span className="w-8 h-8 rounded-full border-2 border-primary-500 text-primary-600 flex items-center justify-center">
-                <HeartPulse size={15} />
-              </span>
-              <p className="text-primary-700 font-semibold leading-tight">Your Skin<br />Our Priority</p>
-            </div>
-          </div>
-
-          {/* Prescription */}
-          {patientPrescription && (
-            <div className="mt-3 bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
-              <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide p-2.5 pb-1.5">
-                <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><Pill size={9} /></span>
-                Prescription — {patientPrescription.id}
-              </p>
-              {patientPrescription.items.length > 0 ? (
-                <table className="w-full border-collapse table-fixed">
-                  <thead>
-                    <tr className="border-y border-primary-200 text-left text-[8px] font-semibold text-primary-600 uppercase tracking-wide bg-primary-100/60">
-                      <th className="py-1 pl-2.5 pr-1 w-[28%]">Medicine</th>
-                      <th className="py-1 px-1 w-[24%]">Dosage</th>
-                      <th className="py-1 px-1 w-[24%]">Frequency</th>
-                      <th className="py-1 pr-2.5 w-[24%]">Duration</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {patientPrescription.items.map((it, i) => (
-                      <tr key={i} className="border-b border-primary-100 last:border-0">
-                        <td className="py-1 pl-2.5 pr-1 text-primary-900 break-words">{it.name}</td>
-                        <td className="py-1 px-1 text-primary-700 break-words">{it.dosage}</td>
-                        <td className="py-1 px-1 text-primary-700 break-words">{it.frequency}</td>
-                        <td className="py-1 pr-2.5 text-primary-700 break-words">{it.duration}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="text-primary-400 px-2.5 pb-2">No medicines listed on this prescription.</p>
-              )}
-            </div>
-          )}
-
-          {/* Footer */}
-          <div className="relative mt-4 pt-3 border-t border-primary-100 flex items-end justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="font-script text-primary-700 text-xl leading-none shrink-0">Thank you</p>
-              <p className="text-primary-500 leading-snug">
-                Thank you for visiting {clinicProfile?.name}.<br />Wishing you good health.
-              </p>
-            </div>
-            <div className="shrink-0 text-center">
-              <div className="flex items-center gap-1 text-primary-400 border-b border-primary-300 pb-3 w-[30mm] justify-center">
-                <PenLine size={10} />
-              </div>
-              <p className="text-primary-500 mt-0.5">Authorized Signature</p>
+            <div ref={probeFooterRef} className="overflow-hidden">
+              <PageNumberFooter pageNum={1} pageCount={2} />
             </div>
           </div>
         </div>
