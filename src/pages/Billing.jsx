@@ -517,28 +517,59 @@ export default function Billing() {
 
     function layoutPages(footerReserve) {
       const workingBudget = PAGE_CONTENT_BUDGET_PX - footerReserve
-      const result = []
-      let currentRows = []
-      let currentHeight = headerH + billedToH + tableGap + (rowsWithIdx.length > 0 ? theadH : 0)
+      const rowsData = rowsWithIdx.map((row, i) => ({ row, rh: rowHeights[i] }))
 
-      rowsWithIdx.forEach((row, i) => {
-        const rh = rowHeights[i]
-        if (currentHeight + rh > workingBudget && currentRows.length > 0) {
-          result.push({ rows: currentRows })
-          currentRows = []
+      // Pack rows page by page, filling each one right up to the budget — this alone never
+      // leaves slack on any page except possibly the last.
+      const rowPages = []
+      let current = []
+      let currentHeight = headerH + billedToH + tableGap + (rowsData.length > 0 ? theadH : 0)
+      rowsData.forEach(({ row, rh }) => {
+        if (currentHeight + rh > workingBudget && current.length > 0) {
+          rowPages.push(current)
+          current = []
           currentHeight = headerH + tableGap + theadH
         }
-        currentRows.push(row)
+        current.push({ row, rh })
         currentHeight += rh
       })
+      rowPages.push(current)
 
-      if (currentHeight + closingH <= workingBudget) {
-        result.push({ rows: currentRows, closingHere: true })
-      } else {
-        result.push({ rows: currentRows, closingHere: false })
-        result.push({ rows: [], closingHere: true })
+      // The closing summary must land on the true last page. If it doesn't fit alongside
+      // that page's rows as-is, pull rows off the END of that page (onto a fresh final page,
+      // paired with the closing summary) one at a time until it fits — rather than exiling
+      // the closing summary to its own near-empty page while the prior page still had rows
+      // that could have shared space with it.
+      function heightOf(pageRows, isFirstPage) {
+        const base = headerH + (isFirstPage ? billedToH : 0) + (pageRows.length > 0 ? tableGap + theadH : 0)
+        return base + pageRows.reduce((sum, r) => sum + r.rh, 0)
       }
-      return result
+
+      const isFirstPage = rowPages.length === 1
+      let lastPage = rowPages[rowPages.length - 1]
+      const moved = []
+      while (heightOf(lastPage, isFirstPage) + closingH > workingBudget && lastPage.length > 0) {
+        moved.unshift(lastPage[lastPage.length - 1])
+        lastPage = lastPage.slice(0, -1)
+      }
+
+      if (moved.length > 0 && lastPage.length === 0) {
+        // Not even one row could share this page with the closing summary. Put all of the
+        // moved rows back as their own page — if there was only ever this one page, that
+        // means the closing summary genuinely needs a page to itself (no rows fit alongside
+        // it), so give it one; but if earlier pages already exist, this slot simply becomes
+        // the (unchanged) row page again and picks up the closing summary as normal, with no
+        // extra page introduced.
+        rowPages[rowPages.length - 1] = moved
+        if (isFirstPage) {
+          rowPages.push([])
+        }
+      } else if (moved.length > 0) {
+        rowPages[rowPages.length - 1] = lastPage
+        rowPages.push(moved)
+      }
+
+      return rowPages.map((pageRows) => ({ rows: pageRows.map((r) => r.row) }))
     }
 
     let pages = layoutPages(0)
