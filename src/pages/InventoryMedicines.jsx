@@ -13,6 +13,7 @@ import InventoryTabs from '../components/inventory/InventoryTabs.jsx'
 import BarcodeScanFlow from '../components/inventory/BarcodeScanFlow.jsx'
 import { getInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem } from '../api/inventory.js'
 import { getStockStatus, isExpiringSoon } from '../utils/inventory.js'
+import { GST_RATE_OPTIONS } from '../utils/gstCalculator.js'
 
 export default function InventoryMedicines() {
   const location = useLocation()
@@ -88,6 +89,7 @@ export default function InventoryMedicines() {
       expiry: form.get('expiry'),
       supplier: form.get('supplier'),
       barcode: form.get('barcode') || null,
+      gstRate: Number(form.get('gstRate')),
     }
     const created = await createInventoryItem(payload)
     setInventory((prev) => [created, ...prev])
@@ -107,6 +109,7 @@ export default function InventoryMedicines() {
       expiry: form.get('expiry'),
       supplier: form.get('supplier'),
       barcode: form.get('barcode') || null,
+      gstRate: Number(form.get('gstRate')),
     }
     const updated = await updateInventoryItem(editTarget.id, payload)
     setInventory((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
@@ -247,6 +250,11 @@ export default function InventoryMedicines() {
             <FormField label="Expiry Date" required>
               <TextInput name="expiry" type="date" required />
             </FormField>
+            <FormField label="GST Rate" required hint="Used to calculate CGST/SGST or IGST in Billing">
+              <Select name="gstRate" required defaultValue="18">
+                {GST_RATE_OPTIONS.map((r) => <option key={r} value={r}>{r}%</option>)}
+              </Select>
+            </FormField>
           </div>
           <FormField label="Supplier" required>
             <TextInput name="supplier" required placeholder="e.g. One Clinical Skincare Distributors" />
@@ -281,6 +289,7 @@ export default function InventoryMedicines() {
             {viewTarget.barcode && <DetailRow label="Barcode" value={viewTarget.barcode} />}
             <DetailRow label="Category" value={viewTarget.category} />
             <DetailRow label="Price" value={`₹${viewTarget.price.toLocaleString('en-IN')}`} />
+            <DetailRow label="GST Rate" value={`${viewTarget.gstRate ?? 0}%`} />
             <DetailRow label="Stock" value={`${viewTarget.stock} units (threshold ${viewTarget.threshold})`} />
             <DetailRow label="Expiry Date" value={viewTarget.expiry} />
             <DetailRow label="Supplier" value={viewTarget.supplier} />
@@ -322,6 +331,11 @@ export default function InventoryMedicines() {
               </FormField>
               <FormField label="Expiry Date" required>
                 <TextInput name="expiry" type="date" required defaultValue={editTarget.expiry} />
+              </FormField>
+              <FormField label="GST Rate" required hint="Used to calculate CGST/SGST or IGST in Billing">
+                <Select name="gstRate" required defaultValue={editTarget.gstRate ?? 18}>
+                  {GST_RATE_OPTIONS.map((r) => <option key={r} value={r}>{r}%</option>)}
+                </Select>
               </FormField>
             </div>
             <FormField label="Supplier" required>

@@ -9,6 +9,7 @@ import Modal from '../components/common/Modal.jsx'
 import { FormField, TextInput, Select } from '../components/common/FormField.jsx'
 import InventoryTabs from '../components/inventory/InventoryTabs.jsx'
 import { getTreatmentOptions, createTreatmentOption, updateTreatmentOption, deleteTreatmentOption } from '../api/treatments.js'
+import { GST_RATE_OPTIONS } from '../utils/gstCalculator.js'
 
 const TREATMENT_CATEGORIES = ['Skin Treatments', 'Hair Treatments', 'Cosmetic Procedures']
 
@@ -50,6 +51,7 @@ export default function InventoryTreatments() {
       name: form.get('name'),
       category: form.get('category'),
       price: Number(form.get('price')),
+      gstRate: Number(form.get('gstRate')),
     }
     const created = await createTreatmentOption(payload)
     setTreatments((prev) => [created, ...prev])
@@ -65,6 +67,7 @@ export default function InventoryTreatments() {
       name: form.get('name'),
       category: form.get('category'),
       price: Number(form.get('price')),
+      gstRate: Number(form.get('gstRate')),
     }
     const updated = await updateTreatmentOption(treatmentEditTarget.id, payload)
     setTreatments((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
@@ -100,12 +103,12 @@ export default function InventoryTreatments() {
           </div>
         </div>
 
-        <Table columns={['Treatment', 'Category', 'Price', 'Actions']}>
+        <Table columns={['Treatment', 'Category', 'Price', 'GST', 'Actions']}>
           {treatmentsLoading && (
-            <tr><td colSpan={4} className="py-10 text-center text-sm text-gray-400">Loading treatments…</td></tr>
+            <tr><td colSpan={5} className="py-10 text-center text-sm text-gray-400">Loading treatments…</td></tr>
           )}
           {!treatmentsLoading && filteredTreatments.length === 0 && (
-            <tr><td colSpan={4} className="py-10 text-center text-sm text-gray-400">No treatments found.</td></tr>
+            <tr><td colSpan={5} className="py-10 text-center text-sm text-gray-400">No treatments found.</td></tr>
           )}
           {filteredTreatments.map((t) => (
             <tr key={t.id} className="hover:bg-primary-50/40 transition">
@@ -115,6 +118,7 @@ export default function InventoryTreatments() {
               </td>
               <td className="py-3 px-3 text-gray-600">{t.category}</td>
               <td className="py-3 px-3 text-gray-600">₹{t.price.toLocaleString('en-IN')}</td>
+              <td className="py-3 px-3 text-gray-600">{t.gstRate ?? 0}%</td>
               <td className="py-3 px-3">
                 <div className="flex items-center gap-1">
                   <button
@@ -163,6 +167,11 @@ export default function InventoryTreatments() {
           <FormField label="Price (₹)" required>
             <TextInput name="price" type="number" min="0" required placeholder="0" />
           </FormField>
+          <FormField label="GST Rate" required hint="Used to calculate CGST/SGST or IGST in Billing">
+            <Select name="gstRate" required defaultValue="18">
+              {GST_RATE_OPTIONS.map((r) => <option key={r} value={r}>{r}%</option>)}
+            </Select>
+          </FormField>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setShowAddTreatment(false)}>Cancel</Button>
             <Button type="submit">Add Treatment</Button>
@@ -181,6 +190,7 @@ export default function InventoryTreatments() {
             <DetailRow label="Treatment ID" value={treatmentViewTarget.id} />
             <DetailRow label="Category" value={treatmentViewTarget.category} />
             <DetailRow label="Price" value={`₹${treatmentViewTarget.price.toLocaleString('en-IN')}`} />
+            <DetailRow label="GST Rate" value={`${treatmentViewTarget.gstRate ?? 0}%`} />
           </div>
         )}
       </Modal>
@@ -202,6 +212,11 @@ export default function InventoryTreatments() {
             </FormField>
             <FormField label="Price (₹)" required>
               <TextInput name="price" type="number" min="0" required defaultValue={treatmentEditTarget.price} />
+            </FormField>
+            <FormField label="GST Rate" required hint="Used to calculate CGST/SGST or IGST in Billing">
+              <Select name="gstRate" required defaultValue={treatmentEditTarget.gstRate ?? 18}>
+                {GST_RATE_OPTIONS.map((r) => <option key={r} value={r}>{r}%</option>)}
+              </Select>
             </FormField>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setTreatmentEditTarget(null)}>Cancel</Button>
