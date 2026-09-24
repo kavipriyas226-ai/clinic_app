@@ -146,120 +146,130 @@ function ItemsTable({ rows, theadRef, getRowRef }) {
   )
 }
 
-function ClosingSummary({ subtotal, discount, discountAmount, gstEnabled, cgstAmount, sgstAmount, total, paymentDetails, patientPrescription, clinicProfile }) {
+// The closing content used to be one monolithic block, forced entirely onto whichever page
+// had room for all of it. It's now 4 independent flowable sections (totals, payment details,
+// prescription, signature) so each one can land on whatever page actually has space for it —
+// "continue naturally after the treatment rows when space is available" — rather than all-or-
+// nothing.
+function TotalsBlock({ subtotal, discount, discountAmount, gstEnabled, cgstAmount, sgstAmount, total }) {
   return (
-    <>
-      {/* Totals */}
-      <div className="flex justify-end mt-2.5">
-        <div className="w-3/5 bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
-          <div className="p-2 space-y-1 text-primary-700">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span className="font-medium text-primary-900">₹{subtotal.toLocaleString('en-IN')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Discount ({discount}%)</span>
-              <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-            </div>
-            {gstEnabled ? (
-              <>
-                <div className="flex justify-between">
-                  <span>CGST @ 9%</span>
-                  <span>₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>SGST @ 9%</span>
-                  <span>₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                </div>
-              </>
-            ) : (
-              <div className="flex justify-between text-primary-400">
-                <span>GST</span>
-                <span>Not applied</span>
+    <div className="flex justify-end mt-2.5">
+      <div className="w-3/5 bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
+        <div className="p-2 space-y-1 text-primary-700">
+          <div className="flex justify-between">
+            <span>Subtotal</span>
+            <span className="font-medium text-primary-900">₹{subtotal.toLocaleString('en-IN')}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Discount ({discount}%)</span>
+            <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+          </div>
+          {gstEnabled ? (
+            <>
+              <div className="flex justify-between">
+                <span>CGST @ 9%</span>
+                <span>₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
-            )}
-          </div>
-          <div className="flex justify-between items-center bg-primary-700 text-white font-bold text-[11px] px-2 py-1.5">
-            <span>Total</span>
-            <span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Payment Details */}
-      <div className="mt-3 flex bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
-        <div className="flex-1 min-w-0 p-2.5">
-          <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1.5">
-            <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><CreditCard size={9} /></span>
-            Payment Details
-          </p>
-          <div className="space-y-0.5 text-primary-700">
-            <div className="flex justify-between gap-2"><span>Total Treatment Amount</span><span className="font-semibold text-primary-900">₹{paymentDetails.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
-            <div className="flex justify-between gap-2"><span>Amount Paid</span><span className="font-semibold text-primary-900">₹{paymentDetails.amountPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
-            <div className="flex justify-between gap-2"><span>Remaining Balance</span><span className="font-semibold text-primary-900">₹{paymentDetails.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
-            <div className="flex justify-between gap-2"><span>Payment Status</span><span className="font-bold text-primary-900">{paymentDetails.status}</span></div>
-            <div className="flex justify-between gap-2"><span>Payment Method</span><span className="font-semibold text-primary-900">{paymentDetails.method}</span></div>
-          </div>
-        </div>
-        <div className="w-px bg-primary-200 my-2.5" />
-        <div className="w-[30mm] shrink-0 flex flex-col items-center justify-center gap-1 p-2 text-center">
-          <span className="w-8 h-8 rounded-full border-2 border-primary-500 text-primary-600 flex items-center justify-center">
-            <HeartPulse size={15} />
-          </span>
-          <p className="text-primary-700 font-semibold leading-tight">Your Skin<br />Our Priority</p>
-        </div>
-      </div>
-
-      {/* Prescription */}
-      {patientPrescription && (
-        <div className="mt-3 bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
-          <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide p-2.5 pb-1.5">
-            <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><Pill size={9} /></span>
-            Prescription — {patientPrescription.id}
-          </p>
-          {patientPrescription.items.length > 0 ? (
-            <table className="w-full border-collapse table-fixed">
-              <thead>
-                <tr className="border-y border-primary-200 text-left text-[8px] font-semibold text-primary-600 uppercase tracking-wide bg-primary-100/60">
-                  <th className="py-1 pl-2.5 pr-1 w-[28%]">Medicine</th>
-                  <th className="py-1 px-1 w-[24%]">Dosage</th>
-                  <th className="py-1 px-1 w-[24%]">Frequency</th>
-                  <th className="py-1 pr-2.5 w-[24%]">Duration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {patientPrescription.items.map((it, i) => (
-                  <tr key={i} className="border-b border-primary-100 last:border-0">
-                    <td className="py-1 pl-2.5 pr-1 text-primary-900 break-words">{it.name}</td>
-                    <td className="py-1 px-1 text-primary-700 break-words">{it.dosage}</td>
-                    <td className="py-1 px-1 text-primary-700 break-words">{it.frequency}</td>
-                    <td className="py-1 pr-2.5 text-primary-700 break-words">{it.duration}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              <div className="flex justify-between">
+                <span>SGST @ 9%</span>
+                <span>₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+              </div>
+            </>
           ) : (
-            <p className="text-primary-400 px-2.5 pb-2">No medicines listed on this prescription.</p>
+            <div className="flex justify-between text-primary-400">
+              <span>GST</span>
+              <span>Not applied</span>
+            </div>
           )}
         </div>
-      )}
-
-      {/* Footer */}
-      <div className="relative mt-4 pt-3 border-t border-primary-100 flex items-end justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <p className="font-script text-primary-700 text-xl leading-none shrink-0">Thank you</p>
-          <p className="text-primary-500 leading-snug">
-            Thank you for visiting {clinicProfile?.name}.<br />Wishing you good health.
-          </p>
-        </div>
-        <div className="shrink-0 text-center">
-          <div className="flex items-center gap-1 text-primary-400 border-b border-primary-300 pb-3 w-[30mm] justify-center">
-            <PenLine size={10} />
-          </div>
-          <p className="text-primary-500 mt-0.5">Authorized Signature</p>
+        <div className="flex justify-between items-center bg-primary-700 text-white font-bold text-[11px] px-2 py-1.5">
+          <span>Total</span>
+          <span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
         </div>
       </div>
-    </>
+    </div>
+  )
+}
+
+function PaymentDetailsBlock({ paymentDetails }) {
+  return (
+    <div className="mt-3 flex bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
+      <div className="flex-1 min-w-0 p-2.5">
+        <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1.5">
+          <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><CreditCard size={9} /></span>
+          Payment Details
+        </p>
+        <div className="space-y-0.5 text-primary-700">
+          <div className="flex justify-between gap-2"><span>Total Treatment Amount</span><span className="font-semibold text-primary-900">₹{paymentDetails.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
+          <div className="flex justify-between gap-2"><span>Amount Paid</span><span className="font-semibold text-primary-900">₹{paymentDetails.amountPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
+          <div className="flex justify-between gap-2"><span>Remaining Balance</span><span className="font-semibold text-primary-900">₹{paymentDetails.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
+          <div className="flex justify-between gap-2"><span>Payment Status</span><span className="font-bold text-primary-900">{paymentDetails.status}</span></div>
+          <div className="flex justify-between gap-2"><span>Payment Method</span><span className="font-semibold text-primary-900">{paymentDetails.method}</span></div>
+        </div>
+      </div>
+      <div className="w-px bg-primary-200 my-2.5" />
+      <div className="w-[30mm] shrink-0 flex flex-col items-center justify-center gap-1 p-2 text-center">
+        <span className="w-8 h-8 rounded-full border-2 border-primary-500 text-primary-600 flex items-center justify-center">
+          <HeartPulse size={15} />
+        </span>
+        <p className="text-primary-700 font-semibold leading-tight">Your Skin<br />Our Priority</p>
+      </div>
+    </div>
+  )
+}
+
+function PrescriptionBlock({ patientPrescription }) {
+  if (!patientPrescription) return null
+  return (
+    <div className="mt-3 bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
+      <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide p-2.5 pb-1.5">
+        <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><Pill size={9} /></span>
+        Prescription — {patientPrescription.id}
+      </p>
+      {patientPrescription.items.length > 0 ? (
+        <table className="w-full border-collapse table-fixed">
+          <thead>
+            <tr className="border-y border-primary-200 text-left text-[8px] font-semibold text-primary-600 uppercase tracking-wide bg-primary-100/60">
+              <th className="py-1 pl-2.5 pr-1 w-[28%]">Medicine</th>
+              <th className="py-1 px-1 w-[24%]">Dosage</th>
+              <th className="py-1 px-1 w-[24%]">Frequency</th>
+              <th className="py-1 pr-2.5 w-[24%]">Duration</th>
+            </tr>
+          </thead>
+          <tbody>
+            {patientPrescription.items.map((it, i) => (
+              <tr key={i} className="border-b border-primary-100 last:border-0">
+                <td className="py-1 pl-2.5 pr-1 text-primary-900 break-words">{it.name}</td>
+                <td className="py-1 px-1 text-primary-700 break-words">{it.dosage}</td>
+                <td className="py-1 px-1 text-primary-700 break-words">{it.frequency}</td>
+                <td className="py-1 pr-2.5 text-primary-700 break-words">{it.duration}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="text-primary-400 px-2.5 pb-2">No medicines listed on this prescription.</p>
+      )}
+    </div>
+  )
+}
+
+function SignatureBlock({ clinicProfile }) {
+  return (
+    <div className="relative mt-4 pt-3 border-t border-primary-100 flex items-end justify-between gap-3">
+      <div className="flex items-center gap-2 min-w-0">
+        <p className="font-script text-primary-700 text-xl leading-none shrink-0">Thank you</p>
+        <p className="text-primary-500 leading-snug">
+          Thank you for visiting {clinicProfile?.name}.<br />Wishing you good health.
+        </p>
+      </div>
+      <div className="shrink-0 text-center">
+        <div className="flex items-center gap-1 text-primary-400 border-b border-primary-300 pb-3 w-[30mm] justify-center">
+          <PenLine size={10} />
+        </div>
+        <p className="text-primary-500 mt-0.5">Authorized Signature</p>
+      </div>
+    </div>
   )
 }
 
@@ -272,10 +282,10 @@ function PageNumberFooter({ pageNum, pageCount }) {
   )
 }
 
-function InvoicePage({ pageNum, pageCount, isFirst, isLast, rows, clinicProfile, logoSrc, savedInvoice, printedAt, selectedPatient, closingProps }) {
+function InvoicePage({ pageNum, pageCount, isFirst, isLastPage, rows, sections, clinicProfile, logoSrc, savedInvoice, printedAt, selectedPatient, closingProps }) {
   return (
     <div
-      className={`a5-invoice relative overflow-hidden p-[6mm] box-border print:text-primary-900 text-[10px] leading-snug${!isLast ? ' a5-page-break' : ''}`}
+      className={`a5-invoice relative overflow-hidden p-[6mm] box-border print:text-primary-900 text-[10px] leading-snug${!isLastPage ? ' a5-page-break' : ''}`}
     >
       <svg viewBox="0 0 120 120" className="absolute -top-4 -right-4 w-24 h-24 text-primary-200 pointer-events-none" fill="currentColor">
         <path d="M110 10C80 5 40 20 25 55c-12 27-5 55 15 65 5-30 20-55 45-70 15-9 25-20 25-40z" />
@@ -285,7 +295,10 @@ function InvoicePage({ pageNum, pageCount, isFirst, isLast, rows, clinicProfile,
       <InvoiceHeader clinicProfile={clinicProfile} logoSrc={logoSrc} savedInvoice={savedInvoice} printedAt={printedAt} />
       {isFirst && <BilledToPatient selectedPatient={selectedPatient} />}
       {rows.length > 0 && <ItemsTable rows={rows} />}
-      {isLast && <ClosingSummary {...closingProps} />}
+      {sections.includes('totals') && <TotalsBlock {...closingProps} />}
+      {sections.includes('payment') && <PaymentDetailsBlock paymentDetails={closingProps.paymentDetails} />}
+      {sections.includes('prescription') && <PrescriptionBlock patientPrescription={closingProps.patientPrescription} />}
+      {sections.includes('signature') && <SignatureBlock clinicProfile={clinicProfile} />}
       <PageNumberFooter pageNum={pageNum} pageCount={pageCount} />
     </div>
   )
@@ -482,11 +495,16 @@ export default function Billing() {
   const probeHeaderRef = useRef(null)
   const probeBilledToRef = useRef(null)
   const probeTheadRef = useRef(null)
-  const probeClosingRef = useRef(null)
+  const probeTotalsRef = useRef(null)
+  const probePaymentRef = useRef(null)
+  const probePrescriptionRef = useRef(null)
+  const probeSignatureRef = useRef(null)
   const probeFooterRef = useRef(null)
   const probeRowRefs = useRef({})
 
-  const [invoicePages, setInvoicePages] = useState(() => [{ rows: rowsWithIdx, isFirst: true, isLast: true }])
+  const [invoicePages, setInvoicePages] = useState(() => [
+    { rows: rowsWithIdx, isFirst: true, isLastPage: true, sections: ['totals', 'payment', 'prescription', 'signature'] },
+  ])
 
   // Custom web fonts (Inter/Playfair Display/Dancing Script) load asynchronously; measuring
   // before they're ready would use fallback-font metrics and under-count row heights, so the
@@ -501,7 +519,10 @@ export default function Billing() {
     const headerH = probeHeaderRef.current?.getBoundingClientRect().height || 0
     const billedToH = probeBilledToRef.current?.getBoundingClientRect().height || 0
     const theadH = probeTheadRef.current?.getBoundingClientRect().height || 0
-    const closingH = probeClosingRef.current?.getBoundingClientRect().height || 0
+    const totalsH = probeTotalsRef.current?.getBoundingClientRect().height || 0
+    const paymentH = probePaymentRef.current?.getBoundingClientRect().height || 0
+    const prescriptionH = patientPrescription ? probePrescriptionRef.current?.getBoundingClientRect().height || 0 : 0
+    const signatureH = probeSignatureRef.current?.getBoundingClientRect().height || 0
     // The "Page X of Y" footer only renders once there's more than one page — reserving its
     // height unconditionally would force content that actually fits on one page to split
     // unnecessarily just to make room for a footer that would never appear. So layoutPages()
@@ -515,61 +536,55 @@ export default function Billing() {
     // measured height, so it's added explicitly whenever a page has rows.
     const tableGap = rowsWithIdx.length > 0 ? 12 : 0
 
+    const sectionDefs = [
+      ['totals', totalsH],
+      ['payment', paymentH],
+      ...(patientPrescription ? [['prescription', prescriptionH]] : []),
+      ['signature', signatureH],
+    ]
+
+    // Fill each page to the full usable height before breaking, exactly like a word processor:
+    // place item rows one by one for as long as they fit; once rows run out (or a row doesn't
+    // fit and moves to a fresh page), keep placing the closing sections — totals, payment
+    // details, prescription, signature — on whatever page has room, each landing immediately
+    // after whatever precedes it when there's space, and starting a new page only when a
+    // section genuinely doesn't fit. Sections are atomic (never split internally); rows are the
+    // only thing that flows across a page boundary.
     function layoutPages(footerReserve) {
-      const workingBudget = PAGE_CONTENT_BUDGET_PX - footerReserve
-      const rowsData = rowsWithIdx.map((row, i) => ({ row, rh: rowHeights[i] }))
+      const budget = PAGE_CONTENT_BUDGET_PX - footerReserve
+      const pages = []
+      let rows = []
+      let sections = []
+      let height = headerH + billedToH
 
-      // Pack rows page by page, filling each one right up to the budget — this alone never
-      // leaves slack on any page except possibly the last.
-      const rowPages = []
-      let current = []
-      let currentHeight = headerH + billedToH + tableGap + (rowsData.length > 0 ? theadH : 0)
-      rowsData.forEach(({ row, rh }) => {
-        if (currentHeight + rh > workingBudget && current.length > 0) {
-          rowPages.push(current)
-          current = []
-          currentHeight = headerH + tableGap + theadH
+      function startNewPage() {
+        pages.push({ rows, sections })
+        rows = []
+        sections = []
+        height = headerH
+      }
+
+      rowsWithIdx.forEach((row, i) => {
+        const rh = rowHeights[i]
+        const withTable = (rows.length === 0 ? tableGap + theadH : 0) + rh
+        if (height + withTable > budget && rows.length > 0) {
+          startNewPage()
         }
-        current.push({ row, rh })
-        currentHeight += rh
+        if (rows.length === 0) height += tableGap + theadH
+        rows.push(row)
+        height += rh
       })
-      rowPages.push(current)
 
-      // The closing summary must land on the true last page. If it doesn't fit alongside
-      // that page's rows as-is, pull rows off the END of that page (onto a fresh final page,
-      // paired with the closing summary) one at a time until it fits — rather than exiling
-      // the closing summary to its own near-empty page while the prior page still had rows
-      // that could have shared space with it.
-      function heightOf(pageRows, isFirstPage) {
-        const base = headerH + (isFirstPage ? billedToH : 0) + (pageRows.length > 0 ? tableGap + theadH : 0)
-        return base + pageRows.reduce((sum, r) => sum + r.rh, 0)
-      }
-
-      const isFirstPage = rowPages.length === 1
-      let lastPage = rowPages[rowPages.length - 1]
-      const moved = []
-      while (heightOf(lastPage, isFirstPage) + closingH > workingBudget && lastPage.length > 0) {
-        moved.unshift(lastPage[lastPage.length - 1])
-        lastPage = lastPage.slice(0, -1)
-      }
-
-      if (moved.length > 0 && lastPage.length === 0) {
-        // Not even one row could share this page with the closing summary. Put all of the
-        // moved rows back as their own page — if there was only ever this one page, that
-        // means the closing summary genuinely needs a page to itself (no rows fit alongside
-        // it), so give it one; but if earlier pages already exist, this slot simply becomes
-        // the (unchanged) row page again and picks up the closing summary as normal, with no
-        // extra page introduced.
-        rowPages[rowPages.length - 1] = moved
-        if (isFirstPage) {
-          rowPages.push([])
+      sectionDefs.forEach(([name, h]) => {
+        if (height + h > budget && (rows.length > 0 || sections.length > 0)) {
+          startNewPage()
         }
-      } else if (moved.length > 0) {
-        rowPages[rowPages.length - 1] = lastPage
-        rowPages.push(moved)
-      }
+        sections.push(name)
+        height += h
+      })
 
-      return rowPages.map((pageRows) => ({ rows: pageRows.map((r) => r.row) }))
+      pages.push({ rows, sections })
+      return pages
     }
 
     let pages = layoutPages(0)
@@ -578,7 +593,7 @@ export default function Billing() {
     }
 
     setInvoicePages(
-      pages.map((p, i) => ({ rows: p.rows, isFirst: i === 0, isLast: i === pages.length - 1 }))
+      pages.map((p, i) => ({ rows: p.rows, sections: p.sections, isFirst: i === 0, isLastPage: i === pages.length - 1 }))
     )
   }, [rowsWithIdx, selectedPatient, clinicProfile, patientPrescription, savedInvoice, printedAt, subtotal, discount, discountAmount, gstEnabled, cgstAmount, sgstAmount, total, paymentDetails, fontsReady])
 
@@ -1128,8 +1143,9 @@ export default function Billing() {
               pageNum={i + 1}
               pageCount={invoicePages.length}
               isFirst={page.isFirst}
-              isLast={page.isLast}
+              isLastPage={page.isLastPage}
               rows={page.rows}
+              sections={page.sections}
               clinicProfile={clinicProfile}
               logoSrc={logoSrc}
               savedInvoice={savedInvoice}
@@ -1142,8 +1158,8 @@ export default function Billing() {
 
         {/* Invisible measurement probe — never shown on screen or in print. Renders every
             block at the exact same width/styling as a real printed page so we can read back
-            real pixel heights (header, billed-to panel, table header row, every item row,
-            and the whole closing summary) and decide where page breaks need to go. */}
+            real pixel heights (header, billed-to panel, table header row, every item row, and
+            each closing section) and decide where page breaks need to go. */}
         <div className="invisible fixed top-0 left-0 -z-50 print:hidden" aria-hidden="true">
           <div className="w-[148mm] p-[6mm] box-border text-[10px] leading-snug">
             {/* overflow-hidden on each measurement wrapper matters: without it, a wrapped
@@ -1163,8 +1179,19 @@ export default function Billing() {
                 probeRowRefs.current[idx] = el
               }}
             />
-            <div ref={probeClosingRef} className="overflow-hidden">
-              <ClosingSummary {...closingProps} />
+            <div ref={probeTotalsRef} className="overflow-hidden">
+              <TotalsBlock {...closingProps} />
+            </div>
+            <div ref={probePaymentRef} className="overflow-hidden">
+              <PaymentDetailsBlock paymentDetails={paymentDetails} />
+            </div>
+            {patientPrescription && (
+              <div ref={probePrescriptionRef} className="overflow-hidden">
+                <PrescriptionBlock patientPrescription={patientPrescription} />
+              </div>
+            )}
+            <div ref={probeSignatureRef} className="overflow-hidden">
+              <SignatureBlock clinicProfile={clinicProfile} />
             </div>
             <div ref={probeFooterRef} className="overflow-hidden">
               <PageNumberFooter pageNum={1} pageCount={2} />
