@@ -51,7 +51,7 @@ export default function Billing() {
   const [lineItems, setLineItems] = useState([])
   const [discountEnabled, setDiscountEnabled] = useState(false)
   const [discount, setDiscount] = useState(0)
-  const [gstEnabled, setGstEnabled] = useState(false)
+  const [gstEnabled, setGstEnabled] = useState(true)
   const [initialPaymentAmount, setInitialPaymentAmount] = useState(0)
   const [initialPaymentTouched, setInitialPaymentTouched] = useState(false)
   const [initialPaymentMethod, setInitialPaymentMethod] = useState('UPI')
@@ -168,6 +168,8 @@ export default function Billing() {
   const discountAmount = discountEnabled ? (subtotal * discount) / 100 : 0
   const taxable = subtotal - discountAmount
   const gstAmount = gstEnabled ? taxable * GST_RATE : 0
+  const cgstAmount = gstAmount / 2
+  const sgstAmount = gstAmount / 2
   const total = taxable + gstAmount
 
   useEffect(() => {
@@ -265,7 +267,7 @@ export default function Billing() {
     )
     setDiscountEnabled(false)
     setDiscount(0)
-    setGstEnabled(false)
+    setGstEnabled(true)
     setInitialPaymentTouched(false)
     setInitialPaymentMethod('UPI')
   }
@@ -517,7 +519,7 @@ export default function Billing() {
               <div>
                 <h3 className="font-bold text-gray-800">GST</h3>
                 <p className="text-xs text-gray-400 mt-1">
-                  {gstEnabled ? 'GST (18%) is applied to the taxable amount' : 'Enable the toggle to apply GST'}
+                  {gstEnabled ? 'CGST 9% + SGST 9% applied to the taxable amount' : 'GST is not applied to this invoice'}
                 </p>
               </div>
               <button
@@ -537,6 +539,18 @@ export default function Billing() {
                 />
               </button>
             </div>
+            {gstEnabled && (
+              <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5 text-sm">
+                <div className="flex justify-between text-gray-600">
+                  <span>CGST @ 9%</span>
+                  <span className="font-medium text-gray-800">₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>SGST @ 9%</span>
+                  <span className="font-medium text-gray-800">₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            )}
           </Card>
 
           <Card>
@@ -605,10 +619,23 @@ export default function Billing() {
               <span>Discount ({discount}%)</span>
               <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
             </div>
-            <div className="flex justify-between text-gray-600">
-              <span>GST {gstEnabled ? '(18%)' : '(disabled)'}</span>
-              <span>+ ₹{gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-            </div>
+            {gstEnabled ? (
+              <>
+                <div className="flex justify-between text-gray-600">
+                  <span>CGST (9%)</span>
+                  <span>+ ₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>SGST (9%)</span>
+                  <span>+ ₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between text-gray-400">
+                <span>GST</span>
+                <span>Not applied</span>
+              </div>
+            )}
             <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-gray-100">
               <span>Total</span>
               <span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
@@ -800,10 +827,23 @@ export default function Billing() {
                 <span>Discount ({discount}%)</span>
                 <span>- ₹{discountAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
-              <div className="flex justify-between text-gray-600">
-                <span>GST {gstEnabled ? '(18%)' : '(disabled)'}</span>
-                <span>+ ₹{gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-              </div>
+              {gstEnabled ? (
+                <>
+                  <div className="flex justify-between text-gray-600">
+                    <span>CGST (9%)</span>
+                    <span>+ ₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>SGST (9%)</span>
+                    <span>+ ₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between text-gray-500">
+                  <span>GST</span>
+                  <span>Not applied</span>
+                </div>
+              )}
               <div className="flex justify-between text-xs font-bold text-gray-900 pt-1 border-t-2 border-gray-800">
                 <span>Total</span>
                 <span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
