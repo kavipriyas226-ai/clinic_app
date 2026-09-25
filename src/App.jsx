@@ -15,6 +15,9 @@ import Pharmacy from './pages/Pharmacy.jsx'
 import Reports from './pages/Reports.jsx'
 import Settings from './pages/Settings.jsx'
 import AuditorDashboard from './pages/AuditorDashboard.jsx'
+import AuditorBillingReport from './pages/AuditorBillingReport.jsx'
+import AuditorPaymentReport from './pages/AuditorPaymentReport.jsx'
+import AuditorPatientBillingReport from './pages/AuditorPatientBillingReport.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { getToken, getRole } from './api/client.js'
 import { ClinicProfileProvider } from './context/ClinicProfileContext.jsx'
@@ -64,6 +67,9 @@ export default function App() {
 
           <Route element={<RequireAuditor />}>
             <Route path="/auditor/dashboard" element={<AuditorDashboard />} />
+            <Route path="/auditor/reports/billing" element={<AuditorBillingReport />} />
+            <Route path="/auditor/reports/payments" element={<AuditorPaymentReport />} />
+            <Route path="/auditor/reports/patients" element={<AuditorPatientBillingReport />} />
           </Route>
         </Route>
 
