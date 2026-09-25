@@ -10,8 +10,28 @@ import Modal from '../components/common/Modal.jsx'
 import { FormField, Select } from '../components/common/FormField.jsx'
 import Pagination from '../components/common/Pagination.jsx'
 import DateRangeFilter, { useDateRange } from '../components/auditor/DateRangeFilter.jsx'
+import ExportBar from '../components/auditor/ExportBar.jsx'
+import PrintHeader from '../components/auditor/PrintHeader.jsx'
 import { getInvoices } from '../api/invoices.js'
 import { splitGst } from '../utils/gst.js'
+
+const EXPORT_COLUMNS = [
+  { header: 'Invoice #', key: 'id' },
+  { header: 'Date', key: 'date' },
+  { header: 'Patient Name', key: 'patientName' },
+  { header: 'Patient ID', key: 'patientId' },
+  { header: 'Subtotal', key: 'subtotal' },
+  { header: 'Discount', key: 'discountAmount' },
+  { header: 'Taxable Amount', key: 'taxable' },
+  { header: 'CGST', key: 'cgst' },
+  { header: 'SGST', key: 'sgst' },
+  { header: 'Total GST', key: 'gstAmount' },
+  { header: 'Final Amount', key: 'total' },
+  { header: 'Amount Paid', key: 'amountPaid' },
+  { header: 'Balance', key: 'balance' },
+  { header: 'Payment Status', key: 'status' },
+  { header: 'Payment Method', key: 'method' },
+]
 
 const PAGE_SIZE = 10
 const money = (n) => `₹${(Number(n) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
@@ -99,11 +119,27 @@ export default function AuditorBillingReport() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
   const pageItems = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
+  const dateRangeLabel = from || to ? `${from || 'earliest'} to ${to || 'latest'}` : 'All Time'
+  const filtersLabel = [
+    statusFilter !== 'All' ? `Status: ${statusFilter}` : null,
+    gstFilter !== 'All' ? `GST: ${gstFilter}` : null,
+    query.trim() ? `Search: "${query.trim()}"` : null,
+  ].filter(Boolean).join(', ') || null
+  const exportTotals = [
+    ['Invoices', filtered.length.toLocaleString('en-IN')],
+    ['Total Billed', money(totals.billed)],
+    ['Total Collected', money(totals.collected)],
+    ['Total Pending', money(totals.pending)],
+    ['Total CGST', money(totals.cgst)],
+    ['Total SGST', money(totals.sgst)],
+  ]
+
   return (
     <div>
       <PageHeader title="Billing & Invoice Report" subtitle="Every invoice, with GST shown as separate CGST and SGST — never a blended figure." />
+      <PrintHeader title="Billing & Invoice Report" dateRangeLabel={dateRangeLabel} filtersLabel={filtersLabel} />
 
-      <Card className="mb-6">
+      <Card className="mb-6 print:hidden">
         <DateRangeFilter {...dateRange} />
       </Card>
 
@@ -117,7 +153,7 @@ export default function AuditorBillingReport() {
       </div>
 
       <Card>
-        <div className="flex flex-col lg:flex-row gap-3 mb-4">
+        <div className="flex flex-col lg:flex-row gap-3 mb-4 print:hidden">
           <SearchInput value={query} onChange={setQuery} placeholder="Search by invoice #, patient name, or patient ID..." className="flex-1" />
           <div className="flex flex-wrap gap-2">
             <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-40">
@@ -139,6 +175,18 @@ export default function AuditorBillingReport() {
               <option value="patient">Patient (A–Z)</option>
             </Select>
           </div>
+        </div>
+
+        <div className="mb-4">
+          <ExportBar
+            title="Billing & Invoice Report"
+            filenameBase="billing-invoice-report"
+            columns={EXPORT_COLUMNS}
+            rows={sorted}
+            dateRangeLabel={dateRangeLabel}
+            filtersLabel={filtersLabel}
+            totals={exportTotals}
+          />
         </div>
 
         {error && (
@@ -166,7 +214,7 @@ export default function AuditorBillingReport() {
               <td className="py-3 px-3 text-emerald-700">{money(inv.amountPaid)}</td>
               <td className="py-3 px-3 text-rose-600 font-medium">{money(inv.balance)}</td>
               <td className="py-3 px-3"><Badge>{inv.status}</Badge></td>
-              <td className="py-3 px-3">
+              <td className="py-3 px-3 print:hidden">
                 <button
                   onClick={() => setViewTarget(inv)}
                   className="p-1.5 rounded-lg text-gray-400 hover:bg-primary-100 hover:text-primary-600 transition"
@@ -179,7 +227,9 @@ export default function AuditorBillingReport() {
           ))}
         </Table>
 
-        <Pagination page={page} totalPages={totalPages} onChange={setPage} totalItems={sorted.length} pageSize={PAGE_SIZE} />
+        <div className="print:hidden">
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} totalItems={sorted.length} pageSize={PAGE_SIZE} />
+        </div>
       </Card>
 
       <Modal open={!!viewTarget} onClose={() => setViewTarget(null)} title={viewTarget ? `Invoice ${viewTarget.id}` : ''}>

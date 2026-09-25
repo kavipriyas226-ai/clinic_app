@@ -9,10 +9,25 @@ import Modal from '../components/common/Modal.jsx'
 import Pagination from '../components/common/Pagination.jsx'
 import { Select } from '../components/common/FormField.jsx'
 import DateRangeFilter, { useDateRange } from '../components/auditor/DateRangeFilter.jsx'
+import ExportBar from '../components/auditor/ExportBar.jsx'
+import PrintHeader from '../components/auditor/PrintHeader.jsx'
 import { getAuditLog } from '../api/auditor.js'
 
 const PAGE_SIZE = 12
 const moduleColor = { Billing: 'purple', Payment: 'blue', Inventory: 'yellow' }
+
+const EXPORT_COLUMNS = [
+  { header: 'Date', key: 'dateOnly' },
+  { header: 'Time', key: 'timeOnly' },
+  { header: 'Module', key: 'module' },
+  { header: 'Action', key: 'action' },
+  { header: 'Record ID', key: 'recordId' },
+  { header: 'User', key: 'userName' },
+  { header: 'Role', key: 'userRole' },
+  { header: 'Summary', key: 'summary' },
+  { header: 'Old Value', key: 'oldValue' },
+  { header: 'New Value', key: 'newValue' },
+]
 
 function formatTimestamp(iso) {
   const d = new Date(iso)
@@ -60,21 +75,36 @@ export default function AuditorAuditLog() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
+  const dateRangeLabel = from || to ? `${from || 'earliest'} to ${to || 'latest'}` : 'All Time'
+  const filtersLabel = [
+    moduleFilter !== 'All' ? `Module: ${moduleFilter}` : null,
+    query.trim() ? `Search: "${query.trim()}"` : null,
+  ].filter(Boolean).join(', ') || null
+  const exportRows = useMemo(
+    () =>
+      filtered.map((e) => {
+        const { date, time } = formatTimestamp(e.timestamp)
+        return { ...e, dateOnly: date, timeOnly: time }
+      }),
+    [filtered]
+  )
+
   return (
     <div>
       <PageHeader title="Audit Log" subtitle="A record of financial and inventory changes, captured from the moment this log was introduced." />
+      <PrintHeader title="Audit Log" dateRangeLabel={dateRangeLabel} filtersLabel={filtersLabel} />
 
-      <div className="flex items-start gap-2 text-sm text-primary-700 bg-primary-50 border border-primary-100 rounded-xl px-3 py-2.5 mb-6">
+      <div className="flex items-start gap-2 text-sm text-primary-700 bg-primary-50 border border-primary-100 rounded-xl px-3 py-2.5 mb-6 print:hidden">
         <History size={15} className="shrink-0 mt-0.5" />
         <p>This log only covers changes made after the audit trail was added — it has no way to reconstruct history for changes made before that point.</p>
       </div>
 
-      <Card className="mb-6">
+      <Card className="mb-6 print:hidden">
         <DateRangeFilter {...dateRange} />
       </Card>
 
       <Card>
-        <div className="flex flex-col lg:flex-row gap-3 mb-4">
+        <div className="flex flex-col lg:flex-row gap-3 mb-4 print:hidden">
           <SearchInput value={query} onChange={setQuery} placeholder="Search by record ID, user, action, or summary..." className="flex-1" />
           <Select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)} className="w-44">
             <option value="All">All Modules</option>
@@ -82,6 +112,18 @@ export default function AuditorAuditLog() {
             <option value="Payment">Payment</option>
             <option value="Inventory">Inventory</option>
           </Select>
+        </div>
+
+        <div className="mb-4">
+          <ExportBar
+            title="Audit Log"
+            filenameBase="audit-log"
+            columns={EXPORT_COLUMNS}
+            rows={exportRows}
+            dateRangeLabel={dateRangeLabel}
+            filtersLabel={filtersLabel}
+            totals={[['Total Entries', filtered.length]]}
+          />
         </div>
 
         {error && (
@@ -111,7 +153,7 @@ export default function AuditorAuditLog() {
                   <p className="text-xs text-gray-400">{e.userRole}</p>
                 </td>
                 <td className="py-3 px-3 text-gray-500 text-xs max-w-[240px] truncate">{e.summary}</td>
-                <td className="py-3 px-3">
+                <td className="py-3 px-3 print:hidden">
                   <button
                     onClick={() => setViewTarget(e)}
                     className="p-1.5 rounded-lg text-gray-400 hover:bg-primary-100 hover:text-primary-600 transition"
@@ -125,7 +167,9 @@ export default function AuditorAuditLog() {
           })}
         </Table>
 
-        <Pagination page={page} totalPages={totalPages} onChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
+        <div className="print:hidden">
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
+        </div>
       </Card>
 
       <Modal open={!!viewTarget} onClose={() => setViewTarget(null)} title="Audit Entry Details">

@@ -8,12 +8,24 @@ import StatCard from '../components/common/StatCard.jsx'
 import Pagination from '../components/common/Pagination.jsx'
 import { Select } from '../components/common/FormField.jsx'
 import DateRangeFilter, { useDateRange } from '../components/auditor/DateRangeFilter.jsx'
+import ExportBar from '../components/auditor/ExportBar.jsx'
+import PrintHeader from '../components/auditor/PrintHeader.jsx'
 import { getInvoices } from '../api/invoices.js'
 
 const PAGE_SIZE = 10
 const money = (n) => `₹${(Number(n) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 
 const methodIcon = { UPI: Smartphone, Card: CreditCard, Cash: Banknote }
+
+const EXPORT_COLUMNS = [
+  { header: 'Date', key: 'date' },
+  { header: 'Invoice #', key: 'invoiceId' },
+  { header: 'Patient Name', key: 'patientName' },
+  { header: 'Patient ID', key: 'patientId' },
+  { header: 'Amount', key: 'amount' },
+  { header: 'Method', key: 'method' },
+  { header: 'Note', key: 'note' },
+]
 
 export default function AuditorPaymentReport() {
   const dateRange = useDateRange('month')
@@ -102,11 +114,26 @@ export default function AuditorPaymentReport() {
   const totalPages = Math.max(1, Math.ceil(sortedPayments.length / PAGE_SIZE))
   const pageItems = sortedPayments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
+  const dateRangeLabel = from || to ? `${from || 'earliest'} to ${to || 'latest'}` : 'All Time'
+  const filtersLabel = [
+    methodFilter !== 'All' ? `Method: ${methodFilter}` : null,
+    query.trim() ? `Search: "${query.trim()}"` : null,
+  ].filter(Boolean).join(', ') || null
+  const exportTotals = [
+    ['Total Collected', money(totalCollected)],
+    ['Total Outstanding', money(totalOutstanding)],
+    ['Fully Paid Invoices', invoiceStatusCounts['Fully Paid']],
+    ['Partially Paid Invoices', invoiceStatusCounts['Partially Paid']],
+    ['Pending Invoices', invoiceStatusCounts['Pending']],
+    ...Object.entries(methodTotals).map(([m, amt]) => [`${m} Collected`, money(amt)]),
+  ]
+
   return (
     <div>
       <PageHeader title="Payment & Collection Report" subtitle="Every recorded payment, plus collection totals by method and invoice status." />
+      <PrintHeader title="Payment & Collection Report" dateRangeLabel={dateRangeLabel} filtersLabel={filtersLabel} />
 
-      <Card className="mb-6">
+      <Card className="mb-6 print:hidden">
         <DateRangeFilter {...dateRange} />
       </Card>
 
@@ -139,7 +166,7 @@ export default function AuditorPaymentReport() {
       </Card>
 
       <Card>
-        <div className="flex flex-col lg:flex-row gap-3 mb-4">
+        <div className="flex flex-col lg:flex-row gap-3 mb-4 print:hidden">
           <SearchInput value={query} onChange={setQuery} placeholder="Search by invoice #, patient name, or patient ID..." className="flex-1" />
           <div className="flex flex-wrap gap-2">
             <Select value={methodFilter} onChange={(e) => setMethodFilter(e.target.value)} className="w-40">
@@ -157,6 +184,18 @@ export default function AuditorPaymentReport() {
           </div>
         </div>
 
+        <div className="mb-4">
+          <ExportBar
+            title="Payment & Collection Report"
+            filenameBase="payment-collection-report"
+            columns={EXPORT_COLUMNS}
+            rows={sortedPayments}
+            dateRangeLabel={dateRangeLabel}
+            filtersLabel={filtersLabel}
+            totals={exportTotals}
+          />
+        </div>
+
         {error && (
           <div className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 mb-4">{error}</div>
         )}
@@ -169,7 +208,7 @@ export default function AuditorPaymentReport() {
             <tr><td colSpan={6} className="py-10 text-center text-sm text-gray-400">No payments match the current filters.</td></tr>
           )}
           {pageItems.map((p) => (
-            <tr key={p.id} className="hover:bg-primary-50/40 transition">
+            <tr key={`${p.invoiceId}-${p.id}`} className="hover:bg-primary-50/40 transition">
               <td className="py-3 px-3 pl-0 text-gray-600">{p.date}</td>
               <td className="py-3 px-3 font-semibold text-gray-800">{p.invoiceId}</td>
               <td className="py-3 px-3">
@@ -183,7 +222,9 @@ export default function AuditorPaymentReport() {
           ))}
         </Table>
 
-        <Pagination page={page} totalPages={totalPages} onChange={setPage} totalItems={sortedPayments.length} pageSize={PAGE_SIZE} />
+        <div className="print:hidden">
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} totalItems={sortedPayments.length} pageSize={PAGE_SIZE} />
+        </div>
       </Card>
     </div>
   )

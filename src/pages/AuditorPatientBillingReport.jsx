@@ -9,11 +9,31 @@ import StatCard from '../components/common/StatCard.jsx'
 import Pagination from '../components/common/Pagination.jsx'
 import { Select } from '../components/common/FormField.jsx'
 import DateRangeFilter, { useDateRange } from '../components/auditor/DateRangeFilter.jsx'
+import ExportBar from '../components/auditor/ExportBar.jsx'
+import PrintHeader from '../components/auditor/PrintHeader.jsx'
 import { getInvoices } from '../api/invoices.js'
 import { splitGst } from '../utils/gst.js'
 
 const PAGE_SIZE = 10
 const money = (n) => `₹${(Number(n) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+
+const EXPORT_COLUMNS = [
+  { header: 'Patient ID', key: 'patientId' },
+  { header: 'Patient Name', key: 'patientName' },
+  { header: 'Invoice #', key: 'invoiceId' },
+  { header: 'Date', key: 'date' },
+  { header: 'Treatment / Medicine', key: 'treatmentName' },
+  { header: 'Type', key: 'treatmentType' },
+  { header: 'Treatment Amount', key: 'treatmentAmount' },
+  { header: 'Discount', key: 'discountAmount' },
+  { header: 'Taxable Amount', key: 'taxable' },
+  { header: 'CGST', key: 'cgst' },
+  { header: 'SGST', key: 'sgst' },
+  { header: 'Final Amount', key: 'total' },
+  { header: 'Amount Paid', key: 'amountPaid' },
+  { header: 'Balance', key: 'balance' },
+  { header: 'Payment Status', key: 'status' },
+]
 
 // A patient's treatment/medicine billing is only verifiable at the invoice level for
 // discount/GST/payment figures — the existing billing system applies those to the whole
@@ -101,11 +121,23 @@ export default function AuditorPatientBillingReport() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
   const pageItems = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
+  const dateRangeLabel = from || to ? `${from || 'earliest'} to ${to || 'latest'}` : 'All Time'
+  const filtersLabel = [
+    typeFilter !== 'All' ? `Type: ${typeFilter}` : null,
+    query.trim() ? `Search: "${query.trim()}"` : null,
+  ].filter(Boolean).join(', ') || null
+  const exportTotals = [
+    ['Billed Line Items', filtered.length.toLocaleString('en-IN')],
+    ['Unique Patients', uniquePatients.toLocaleString('en-IN')],
+    ['Total Treatment Amount', money(totalTreatmentAmount)],
+  ]
+
   return (
     <div>
       <PageHeader title="Patient & Treatment Billing Report" subtitle="Every billed treatment or medicine, line by line, for verifying patient billing." />
+      <PrintHeader title="Patient & Treatment Billing Report" dateRangeLabel={dateRangeLabel} filtersLabel={filtersLabel} />
 
-      <Card className="mb-6">
+      <Card className="mb-6 print:hidden">
         <DateRangeFilter {...dateRange} />
       </Card>
 
@@ -116,7 +148,7 @@ export default function AuditorPatientBillingReport() {
       </div>
 
       <Card>
-        <div className="flex flex-col lg:flex-row gap-3 mb-4">
+        <div className="flex flex-col lg:flex-row gap-3 mb-4 print:hidden">
           <SearchInput value={query} onChange={setQuery} placeholder="Search by patient, invoice #, or treatment/medicine name..." className="flex-1" />
           <div className="flex flex-wrap gap-2">
             <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="w-40">
@@ -132,6 +164,18 @@ export default function AuditorPatientBillingReport() {
               <option value="patient">Patient (A–Z)</option>
             </Select>
           </div>
+        </div>
+
+        <div className="mb-4">
+          <ExportBar
+            title="Patient & Treatment Billing Report"
+            filenameBase="patient-treatment-billing-report"
+            columns={EXPORT_COLUMNS}
+            rows={sorted}
+            dateRangeLabel={dateRangeLabel}
+            filtersLabel={filtersLabel}
+            totals={exportTotals}
+          />
         </div>
 
         {error && (
@@ -167,7 +211,9 @@ export default function AuditorPatientBillingReport() {
           ))}
         </Table>
 
-        <Pagination page={page} totalPages={totalPages} onChange={setPage} totalItems={sorted.length} pageSize={PAGE_SIZE} />
+        <div className="print:hidden">
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} totalItems={sorted.length} pageSize={PAGE_SIZE} />
+        </div>
       </Card>
     </div>
   )
