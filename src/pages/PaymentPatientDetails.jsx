@@ -190,7 +190,7 @@ export default function PaymentPatientDetails() {
     lines.push(toCsvRow(['Invoice ID', 'Visit #', 'Payment Date', 'Amount Paid', 'Method', 'Note', 'Invoice Total', 'Invoice Balance', 'Invoice Status']))
     invoices.forEach((inv) => {
       inv.payments?.forEach((p, i) => {
-        lines.push(toCsvRow([inv.id, i + 1, p.date, p.amount, p.method, p.note || '', inv.total, inv.balance, inv.status]))
+        lines.push(toCsvRow([inv.id, p.visitNumber || i + 1, p.date, p.amount, p.method, p.note || '', inv.total, inv.balance, inv.status]))
       })
     })
 
@@ -343,7 +343,7 @@ export default function PaymentPatientDetails() {
                       return (
                         <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100">
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-800 truncate">Visit {i + 1}{p.note ? ` — ${p.note}` : ''}</p>
+                            <p className="text-sm font-medium text-gray-800 truncate">Visit {p.visitNumber || i + 1}{p.note ? ` — ${p.note}` : ''}</p>
                             <p className="text-xs text-gray-400 flex items-center gap-1"><Icon size={12} /> {p.method} · {p.date}</p>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
@@ -398,7 +398,7 @@ export default function PaymentPatientDetails() {
             <FormField label="Date" required>
               <TextInput type="date" value={installmentForm.date} onChange={(e) => setInstallmentForm((f) => ({ ...f, date: e.target.value }))} />
             </FormField>
-            <FormField label="Note" hint="e.g. 2nd Visit">
+            <FormField label="Note" hint="Optional — e.g. payment reference or remarks">
               <TextInput value={installmentForm.note} onChange={(e) => setInstallmentForm((f) => ({ ...f, note: e.target.value }))} />
             </FormField>
             <div className="flex justify-end gap-2 pt-2">
@@ -526,7 +526,7 @@ export default function PaymentPatientDetails() {
               <tbody>
                 {receiptTarget.payments?.map((p, i) => (
                   <tr key={p.id} className="border-b border-gray-100">
-                    <td className="py-1.5 pr-2 text-gray-800">{i + 1}</td>
+                    <td className="py-1.5 pr-2 text-gray-800">{p.visitNumber || i + 1}</td>
                     <td className="py-1.5 px-2 text-gray-600">{p.date}</td>
                     <td className="py-1.5 px-2 text-gray-600">{p.method}</td>
                     <td className="py-1.5 pl-2 text-right font-medium text-gray-800">₹{p.amount.toLocaleString('en-IN')}</td>

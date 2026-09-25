@@ -234,7 +234,7 @@ export default function Payments() {
                     return (
                       <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-primary-50/40">
                         <div>
-                          <p className="font-medium text-gray-800">Visit {i + 1} — {p.note || p.method}</p>
+                          <p className="font-medium text-gray-800">Visit {p.visitNumber || i + 1} — {p.note || p.method}</p>
                           <p className="text-xs text-gray-400 flex items-center gap-1"><Icon size={12} /> {p.method} · {p.date}</p>
                         </div>
                         <span className="font-semibold text-gray-700">₹{p.amount.toLocaleString('en-IN')}</span>
@@ -286,7 +286,7 @@ export default function Payments() {
                 onChange={(e) => setInstallmentForm((f) => ({ ...f, date: e.target.value }))}
               />
             </FormField>
-            <FormField label="Note" hint="e.g. 2nd Visit">
+            <FormField label="Note" hint="Optional — e.g. payment reference or remarks">
               <TextInput
                 value={installmentForm.note}
                 onChange={(e) => setInstallmentForm((f) => ({ ...f, note: e.target.value }))}

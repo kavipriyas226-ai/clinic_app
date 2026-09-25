@@ -10,7 +10,7 @@ import { getPatients } from '../api/patients.js'
 import { getTreatmentOptions } from '../api/treatments.js'
 import { getInventory } from '../api/inventory.js'
 import { getClinicProfile } from '../api/clinicProfile.js'
-import { createInvoice } from '../api/invoices.js'
+import { createInvoice, getInvoicesByPatient } from '../api/invoices.js'
 import { getPrescriptionsByPatient } from '../api/prescriptions.js'
 import logo from '../assets/logo.png'
 
@@ -340,6 +340,7 @@ export default function Billing() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [patientPrescription, setPatientPrescription] = useState(null)
+  const [priorPatientInvoices, setPriorPatientInvoices] = useState([])
   const [savedInvoice, setSavedInvoice] = useState(null)
   const [printedAt, setPrintedAt] = useState(null)
 
@@ -376,7 +377,21 @@ export default function Billing() {
       .catch(() => setPatientPrescription(null))
   }, [patientId])
 
+  // Drives the "Visit #N" preview below — this patient's payment count so far, so a
+  // returning patient's next payment is shown continuing their real sequence rather than
+  // always previewing as visit 1.
+  useEffect(() => {
+    if (!patientId) {
+      setPriorPatientInvoices([])
+      return
+    }
+    getInvoicesByPatient(patientId)
+      .then(setPriorPatientInvoices)
+      .catch(() => setPriorPatientInvoices([]))
+  }, [patientId])
+
   const selectedPatient = patients.find((p) => p.id === patientId)
+  const previewVisitNumber = priorPatientInvoices.reduce((sum, inv) => sum + (inv.payments?.length || 0), 0) + 1
 
   const filteredPatients = useMemo(() => {
     // Empty query -> no results shown. The dropdown should never dump the
@@ -458,6 +473,13 @@ export default function Billing() {
   }, [total, initialPaymentTouched])
 
   const formLocked = !!savedInvoice
+
+  // Once saved, the invoice's own payment record carries the real, backend-assigned visit
+  // number; before that, previewVisitNumber (this patient's payment count so far, from prior
+  // invoices) is the best available preview.
+  const displayedVisitNumber = formLocked
+    ? savedInvoice.payments?.[savedInvoice.payments.length - 1]?.visitNumber
+    : previewVisitNumber
 
   // Payment details shown on the invoice. Before Save is clicked these are a live
   // preview computed from the form; once saved, they reflect the persisted invoice
@@ -660,7 +682,15 @@ export default function Billing() {
     setSavedInvoice(null)
     setPrintedAt(null)
     setError('')
-    setPatientId(patients[0]?.id || '')
+    const nextPatientId = patients[0]?.id || ''
+    setPatientId(nextPatientId)
+    // Same patient as before: the [patientId] effect won't re-fire on an unchanged id, so
+    // refetch explicitly — otherwise the visit-number preview would miss the payment just saved.
+    if (nextPatientId) {
+      getInvoicesByPatient(nextPatientId).then(setPriorPatientInvoices).catch(() => setPriorPatientInvoices([]))
+    } else {
+      setPriorPatientInvoices([])
+    }
     setLineItems(
       treatmentOptions.length > 0
         ? [{ id: treatmentOptions[0].id, type: 'Treatment', name: treatmentOptions[0].name, price: treatmentOptions[0].price, qty: 1, amount: treatmentOptions[0].price }]
@@ -705,7 +735,7 @@ export default function Billing() {
       {formLocked && (
         <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 mb-4 print:hidden">
           <CheckCircle2 size={15} className="shrink-0" />
-          Invoice {savedInvoice.id} saved — this payment has been added to Payment History. Start a new invoice to make further changes.
+          Invoice {savedInvoice.id} saved{displayedVisitNumber ? ` (Visit #${displayedVisitNumber})` : ''} — this payment has been added to Payment History. Start a new invoice to make further changes.
         </div>
       )}
 
@@ -955,7 +985,14 @@ export default function Billing() {
           </Card>
 
           <Card>
-            <h3 className="font-bold text-gray-800 mb-1">Payment Details (This Visit)</h3>
+            <h3 className="font-bold text-gray-800 mb-1 flex items-center gap-2">
+              Payment Details (This Visit)
+              {Number(initialPaymentAmount) > 0 && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary-50 text-primary-700">
+                  Visit #{displayedVisitNumber}
+                </span>
+              )}
+            </h3>
             <p className="text-xs text-gray-400 mb-4">
               Defaults to the full invoice total. Lower it to start an installment plan — the remaining balance can be collected on later visits from the Payments module.
             </p>
