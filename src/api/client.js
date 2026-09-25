@@ -28,6 +28,10 @@ export function isAdmin() {
   return getRole() === 'ADMIN'
 }
 
+export function isAuditor() {
+  return getRole() === 'AUDITOR'
+}
+
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
 })

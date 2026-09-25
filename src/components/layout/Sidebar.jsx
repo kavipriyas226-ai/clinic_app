@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import { useClinicProfile } from '../../context/ClinicProfileContext.jsx'
+import { isAuditor } from '../../api/client.js'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -29,9 +30,15 @@ const navItems = [
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
+// Reports/Audit Log entries get added here in later phases as those pages are built.
+const auditorNavItems = [
+  { to: '/auditor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+]
+
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }) {
   const { profile } = useClinicProfile()
   const clinicShortName = profile?.name || 'Devs Hair & Skin'
+  const items = isAuditor() ? auditorNavItems : navItems
 
   return (
     <>
@@ -71,7 +78,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {items.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}

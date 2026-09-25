@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Mail, Lock, Eye, EyeOff, Sparkles, AlertCircle, KeyRound, Phone, ShieldCheck, User } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Sparkles, AlertCircle, KeyRound, Phone, ShieldCheck, User, ClipboardCheck } from 'lucide-react'
 import Button from '../components/common/Button.jsx'
 import Modal from '../components/common/Modal.jsx'
 import { login } from '../api/auth.js'
@@ -23,8 +23,8 @@ export default function Login() {
     setSubmitting(true)
     setError('')
     try {
-      await login(email.trim(), password, loginType)
-      navigate('/dashboard')
+      const data = await login(email.trim(), password, loginType)
+      navigate(data.role === 'AUDITOR' ? '/auditor/dashboard' : '/dashboard')
     } catch (err) {
       if (err.response?.status === 401) {
         setError(err.response?.data?.message || 'Incorrect username or password.')
@@ -70,28 +70,39 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Login Type</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setLoginType('ADMIN')}
-                  className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold border transition ${
+                  className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-semibold border transition ${
                     loginType === 'ADMIN'
                       ? 'bg-primary-500 text-white border-primary-500 shadow-soft'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-primary-300'
                   }`}
                 >
-                  <ShieldCheck size={15} /> Admin Login
+                  <ShieldCheck size={15} /> Admin
                 </button>
                 <button
                   type="button"
                   onClick={() => setLoginType('USER')}
-                  className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold border transition ${
+                  className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-semibold border transition ${
                     loginType === 'USER'
                       ? 'bg-primary-500 text-white border-primary-500 shadow-soft'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-primary-300'
                   }`}
                 >
-                  <User size={15} /> Staff Login
+                  <User size={15} /> Staff
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginType('AUDITOR')}
+                  className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-semibold border transition ${
+                    loginType === 'AUDITOR'
+                      ? 'bg-primary-500 text-white border-primary-500 shadow-soft'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-primary-300'
+                  }`}
+                >
+                  <ClipboardCheck size={15} /> Auditor
                 </button>
               </div>
             </div>

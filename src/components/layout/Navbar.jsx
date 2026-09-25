@@ -3,14 +3,19 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, deleteNotification } from '../../api/notifications.js'
 import { logout } from '../../api/auth.js'
-import { isAdmin } from '../../api/client.js'
+import { isAdmin, isAuditor } from '../../api/client.js'
 import { timeAgo } from '../../utils/time.js'
 
 const POLL_INTERVAL_MS = 8000
 
 export default function Navbar({ onMenuClick }) {
   const admin = isAdmin()
-  const currentUser = admin ? { name: 'Admin', avatarInitials: 'AD' } : { name: 'Staff', avatarInitials: 'ST' }
+  const auditor = isAuditor()
+  const currentUser = admin
+    ? { name: 'Admin', avatarInitials: 'AD' }
+    : auditor
+      ? { name: 'Auditor', avatarInitials: 'AU' }
+      : { name: 'Staff', avatarInitials: 'ST' }
   const [profileOpen, setProfileOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
@@ -101,19 +106,22 @@ export default function Navbar({ onMenuClick }) {
         >
           <Menu size={20} />
         </button>
-        <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-64">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search patients..."
-            className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition"
-          />
-        </form>
+        {!auditor && (
+          <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-64">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search patients..."
+              className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition"
+            />
+          </form>
+        )}
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
+        {!auditor && (
         <div className="relative" ref={notifRef}>
           <button
             onClick={() => setNotifOpen((v) => !v)}
@@ -181,6 +189,7 @@ export default function Navbar({ onMenuClick }) {
             </div>
           )}
         </div>
+        )}
 
         <div className="relative" ref={profileRef}>
           <button
@@ -198,15 +207,17 @@ export default function Navbar({ onMenuClick }) {
 
           {profileOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-card border border-gray-100 py-1.5 z-20">
-              <button
-                onClick={() => {
-                  setProfileOpen(false)
-                  navigate('/settings')
-                }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition"
-              >
-                Settings
-              </button>
+              {!auditor && (
+                <button
+                  onClick={() => {
+                    setProfileOpen(false)
+                    navigate('/settings')
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition"
+                >
+                  Settings
+                </button>
+              )}
               <button
                 onClick={() => {
                   setProfileOpen(false)
