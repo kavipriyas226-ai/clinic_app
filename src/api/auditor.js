@@ -4,3 +4,8 @@ export async function getAuditorDashboard({ from, to } = {}) {
   const { data } = await client.get('/auditor/dashboard', { params: { from, to } })
   return data
 }
+
+export async function getAuditLog({ module, from, to } = {}) {
+  const { data } = await client.get('/auditor/audit-log', { params: { module, from, to } })
+  return data
+}

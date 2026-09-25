@@ -16,6 +16,7 @@ import {
   FileText,
   Wallet,
   ClipboardList,
+  History,
 } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import { useClinicProfile } from '../../context/ClinicProfileContext.jsx'
@@ -33,12 +34,13 @@ const navItems = [
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
-// Inventory/Audit Log entries get added here once those reports are built (Phase 3).
 const auditorNavItems = [
   { to: '/auditor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/auditor/reports/billing', label: 'Billing Report', icon: FileText },
   { to: '/auditor/reports/payments', label: 'Payment Report', icon: Wallet },
   { to: '/auditor/reports/patients', label: 'Patient Billing', icon: ClipboardList },
+  { to: '/auditor/reports/inventory', label: 'Inventory Report', icon: Boxes },
+  { to: '/auditor/audit-log', label: 'Audit Log', icon: History },
 ]
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }) {

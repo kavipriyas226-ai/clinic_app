@@ -18,6 +18,8 @@ import AuditorDashboard from './pages/AuditorDashboard.jsx'
 import AuditorBillingReport from './pages/AuditorBillingReport.jsx'
 import AuditorPaymentReport from './pages/AuditorPaymentReport.jsx'
 import AuditorPatientBillingReport from './pages/AuditorPatientBillingReport.jsx'
+import AuditorInventoryReport from './pages/AuditorInventoryReport.jsx'
+import AuditorAuditLog from './pages/AuditorAuditLog.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { getToken, getRole } from './api/client.js'
 import { ClinicProfileProvider } from './context/ClinicProfileContext.jsx'
@@ -70,6 +72,8 @@ export default function App() {
             <Route path="/auditor/reports/billing" element={<AuditorBillingReport />} />
             <Route path="/auditor/reports/payments" element={<AuditorPaymentReport />} />
             <Route path="/auditor/reports/patients" element={<AuditorPatientBillingReport />} />
+            <Route path="/auditor/reports/inventory" element={<AuditorInventoryReport />} />
+            <Route path="/auditor/audit-log" element={<AuditorAuditLog />} />
           </Route>
         </Route>
 
