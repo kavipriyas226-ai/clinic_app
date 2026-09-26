@@ -17,6 +17,7 @@ import {
   Wallet,
   ClipboardList,
   History,
+  ShoppingCart,
 } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import { useClinicProfile } from '../../context/ClinicProfileContext.jsx'
@@ -27,6 +28,7 @@ const navItems = [
   { to: '/patients', label: 'Patients', icon: Users },
   { to: '/patients/register', label: 'Register Patient', icon: UserPlus },
   { to: '/billing', label: 'Billing', icon: Receipt },
+  { to: '/purchase', label: 'Purchase', icon: ShoppingCart },
   { to: '/pharmacy', label: 'Pharmacy', icon: Pill },
   { to: '/payments', label: 'Payments', icon: CreditCard },
   { to: '/inventory', label: 'Inventory', icon: Boxes },
@@ -40,6 +42,7 @@ const auditorNavItems = [
   { to: '/auditor/reports/payments', label: 'Payment Report', icon: Wallet },
   { to: '/auditor/reports/patients', label: 'Patient Billing', icon: ClipboardList },
   { to: '/auditor/reports/inventory', label: 'Inventory Report', icon: Boxes },
+  { to: '/auditor/reports/purchases', label: 'Purchase Report', icon: ShoppingCart },
   { to: '/auditor/audit-log', label: 'Audit Log', icon: History },
 ]
 

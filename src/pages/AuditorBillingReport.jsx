@@ -241,9 +241,14 @@ export default function AuditorBillingReport() {
             <div className="pt-2 border-t border-gray-100">
               <p className="text-xs font-semibold text-gray-400 uppercase mb-1.5">Treatment / Service Details</p>
               {viewTarget.lineItems?.map((item, idx) => (
-                <div key={idx} className="flex justify-between py-1 text-gray-600">
-                  <span className="truncate pr-2">{item.name} × {item.qty} @ {money(item.price)}</span>
-                  <span className="shrink-0">{money(item.amount)}</span>
+                <div key={idx} className="py-1.5 border-b border-gray-50 last:border-0">
+                  <div className="flex justify-between text-gray-600">
+                    <span className="truncate pr-2">{item.name} × {item.qty} @ {money(item.price)}</span>
+                    <span className="shrink-0">{money(item.amount)}</span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    HSN/SAC: {item.hsnSacCode || '—'} · GST {item.gstPercent ?? '—'}%
+                  </p>
                 </div>
               ))}
             </div>
@@ -254,8 +259,8 @@ export default function AuditorBillingReport() {
               <DetailRow label="Taxable Amount" value={money(viewTarget.taxable)} />
               {viewTarget.gstEnabled ? (
                 <>
-                  <DetailRow label="CGST @ 9%" value={money(viewTarget.cgst)} />
-                  <DetailRow label="SGST @ 9%" value={money(viewTarget.sgst)} />
+                  <DetailRow label="CGST" value={money(viewTarget.cgst)} />
+                  <DetailRow label="SGST" value={money(viewTarget.sgst)} />
                 </>
               ) : (
                 <DetailRow label="GST" value="Not applied" />

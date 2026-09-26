@@ -12,7 +12,6 @@ import DateRangeFilter, { useDateRange } from '../components/auditor/DateRangeFi
 import ExportBar from '../components/auditor/ExportBar.jsx'
 import PrintHeader from '../components/auditor/PrintHeader.jsx'
 import { getInvoices } from '../api/invoices.js'
-import { splitGst } from '../utils/gst.js'
 
 const PAGE_SIZE = 10
 const money = (n) => `₹${(Number(n) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
@@ -24,21 +23,22 @@ const EXPORT_COLUMNS = [
   { header: 'Date', key: 'date' },
   { header: 'Treatment / Medicine', key: 'treatmentName' },
   { header: 'Type', key: 'treatmentType' },
+  { header: 'HSN/SAC Code', key: 'hsnSacCode' },
+  { header: 'GST %', key: 'gstPercent' },
   { header: 'Treatment Amount', key: 'treatmentAmount' },
-  { header: 'Discount', key: 'discountAmount' },
-  { header: 'Taxable Amount', key: 'taxable' },
   { header: 'CGST', key: 'cgst' },
   { header: 'SGST', key: 'sgst' },
-  { header: 'Final Amount', key: 'total' },
+  { header: 'Line Total', key: 'lineTotal' },
+  { header: 'Invoice Discount', key: 'discountAmount' },
+  { header: 'Invoice Final Amount', key: 'total' },
   { header: 'Amount Paid', key: 'amountPaid' },
   { header: 'Balance', key: 'balance' },
   { header: 'Payment Status', key: 'status' },
 ]
 
-// A patient's treatment/medicine billing is only verifiable at the invoice level for
-// discount/GST/payment figures — the existing billing system applies those to the whole
-// invoice, not per line item — so each line item row here carries its parent invoice's
-// figures rather than a fabricated per-line split.
+// Each row carries its own line's real HSN/SAC, GST%, and GST amount (snapshotted onto the
+// invoice's line item at billing time) — only the discount/payment/balance figures stay
+// invoice-level, since those are genuinely applied to the invoice as a whole, not per line.
 export default function AuditorPatientBillingReport() {
   const dateRange = useDateRange('month')
   const { from, to } = dateRange
@@ -61,29 +61,32 @@ export default function AuditorPatientBillingReport() {
   }, [])
 
   const rows = useMemo(() => {
-    return invoices.flatMap((inv) => {
-      const { cgst, sgst } = splitGst(inv.gstAmount)
-      const taxable = (Number(inv.subtotal) || 0) - (Number(inv.discountAmount) || 0)
-      return (inv.lineItems || []).map((item, idx) => ({
-        key: `${inv.id}-${idx}`,
-        patientId: inv.patientId,
-        patientName: inv.patientName,
-        invoiceId: inv.id,
-        date: inv.date,
-        treatmentName: item.name,
-        treatmentType: item.type,
-        treatmentAmount: item.amount,
-        discountAmount: inv.discountAmount,
-        taxable,
-        cgst: inv.gstEnabled ? cgst : 0,
-        sgst: inv.gstEnabled ? sgst : 0,
-        gstEnabled: inv.gstEnabled,
-        total: inv.total,
-        amountPaid: inv.amountPaid,
-        balance: inv.balance,
-        status: inv.status,
-      }))
-    })
+    return invoices.flatMap((inv) =>
+      (inv.lineItems || []).map((item, idx) => {
+        const lineGstAmount = Number(item.gstAmount) || 0
+        return {
+          key: `${inv.id}-${idx}`,
+          patientId: inv.patientId,
+          patientName: inv.patientName,
+          invoiceId: inv.id,
+          date: inv.date,
+          treatmentName: item.name,
+          treatmentType: item.type,
+          hsnSacCode: item.hsnSacCode || '—',
+          gstPercent: item.gstPercent ?? '—',
+          treatmentAmount: item.amount,
+          cgst: inv.gstEnabled ? lineGstAmount / 2 : 0,
+          sgst: inv.gstEnabled ? lineGstAmount / 2 : 0,
+          lineTotal: inv.gstEnabled ? (item.totalAmount ?? item.amount) : item.amount,
+          gstEnabled: inv.gstEnabled,
+          discountAmount: inv.discountAmount,
+          total: inv.total,
+          amountPaid: inv.amountPaid,
+          balance: inv.balance,
+          status: inv.status,
+        }
+      })
+    )
   }, [invoices])
 
   const filtered = useMemo(() => {
@@ -182,12 +185,12 @@ export default function AuditorPatientBillingReport() {
           <div className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 mb-4">{error}</div>
         )}
 
-        <Table columns={['Patient', 'Invoice #', 'Date', 'Treatment / Medicine', 'Amount', 'CGST', 'SGST', 'Final Amount', 'Balance', 'Status']}>
+        <Table columns={['Patient', 'Invoice #', 'Date', 'Treatment / Medicine', 'HSN/SAC', 'GST %', 'Amount', 'CGST', 'SGST', 'Line Total', 'Status']}>
           {loading && (
-            <tr><td colSpan={10} className="py-10 text-center text-sm text-gray-400">Loading billing data…</td></tr>
+            <tr><td colSpan={11} className="py-10 text-center text-sm text-gray-400">Loading billing data…</td></tr>
           )}
           {!loading && pageItems.length === 0 && (
-            <tr><td colSpan={10} className="py-10 text-center text-sm text-gray-400">No billed items match the current filters.</td></tr>
+            <tr><td colSpan={11} className="py-10 text-center text-sm text-gray-400">No billed items match the current filters.</td></tr>
           )}
           {pageItems.map((r) => (
             <tr key={r.key} className="hover:bg-primary-50/40 transition">
@@ -201,11 +204,12 @@ export default function AuditorPatientBillingReport() {
                 <p className="text-gray-800">{r.treatmentName}</p>
                 <p className="text-xs text-gray-400">{r.treatmentType}</p>
               </td>
+              <td className="py-3 px-3 text-gray-600">{r.hsnSacCode}</td>
+              <td className="py-3 px-3 text-gray-600">{r.gstEnabled ? `${r.gstPercent}%` : '—'}</td>
               <td className="py-3 px-3 font-medium text-gray-700">{money(r.treatmentAmount)}</td>
               <td className="py-3 px-3 text-gray-600">{r.gstEnabled ? money(r.cgst) : '—'}</td>
               <td className="py-3 px-3 text-gray-600">{r.gstEnabled ? money(r.sgst) : '—'}</td>
-              <td className="py-3 px-3 font-medium text-gray-700">{money(r.total)}</td>
-              <td className="py-3 px-3 text-rose-600 font-medium">{money(r.balance)}</td>
+              <td className="py-3 px-3 font-medium text-gray-700">{money(r.lineTotal)}</td>
               <td className="py-3 px-3"><Badge>{r.status}</Badge></td>
             </tr>
           ))}

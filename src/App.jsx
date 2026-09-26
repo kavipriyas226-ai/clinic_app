@@ -6,6 +6,7 @@ import Patients from './pages/Patients.jsx'
 import RegisterPatient from './pages/RegisterPatient.jsx'
 import PatientDetails from './pages/PatientDetails.jsx'
 import Billing from './pages/Billing.jsx'
+import Purchase from './pages/Purchase.jsx'
 import Payments from './pages/Payments.jsx'
 import PaymentPatientDetails from './pages/PaymentPatientDetails.jsx'
 import Inventory from './pages/Inventory.jsx'
@@ -19,6 +20,7 @@ import AuditorBillingReport from './pages/AuditorBillingReport.jsx'
 import AuditorPaymentReport from './pages/AuditorPaymentReport.jsx'
 import AuditorPatientBillingReport from './pages/AuditorPatientBillingReport.jsx'
 import AuditorInventoryReport from './pages/AuditorInventoryReport.jsx'
+import AuditorPurchaseReport from './pages/AuditorPurchaseReport.jsx'
 import AuditorAuditLog from './pages/AuditorAuditLog.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { getToken, getRole } from './api/client.js'
@@ -57,6 +59,7 @@ export default function App() {
             <Route path="/patients/:id/edit" element={<RegisterPatient />} />
             <Route path="/patients/:id" element={<PatientDetails />} />
             <Route path="/billing" element={<Billing />} />
+            <Route path="/purchase" element={<Purchase />} />
             <Route path="/payments" element={<Payments />} />
             <Route path="/payments/patient/:patientId" element={<PaymentPatientDetails />} />
             <Route path="/inventory" element={<Inventory />} />
@@ -73,6 +76,7 @@ export default function App() {
             <Route path="/auditor/reports/payments" element={<AuditorPaymentReport />} />
             <Route path="/auditor/reports/patients" element={<AuditorPatientBillingReport />} />
             <Route path="/auditor/reports/inventory" element={<AuditorInventoryReport />} />
+            <Route path="/auditor/reports/purchases" element={<AuditorPurchaseReport />} />
             <Route path="/auditor/audit-log" element={<AuditorAuditLog />} />
           </Route>
         </Route>

@@ -30,6 +30,8 @@ const STOCK_EXPORT_COLUMNS = [
   { header: 'Product', key: 'name' },
   { header: 'Product ID', key: 'id' },
   { header: 'Category', key: 'category' },
+  { header: 'HSN/SAC Code', key: 'hsnSacCode' },
+  { header: 'GST %', key: 'gstPercentLabel' },
   { header: 'Stock', key: 'stock' },
   { header: 'Threshold', key: 'threshold' },
   { header: 'Price', key: 'price' },
@@ -128,7 +130,13 @@ export default function AuditorInventoryReport() {
   useEffect(() => setMovementPage(1), [movementQuery, movementTypeFilter, from, to])
 
   const stockExportRows = useMemo(
-    () => filteredItems.map((i) => ({ ...i, stockValue: i.price * i.stock, statusLabel: getStockStatus(i) })),
+    () =>
+      filteredItems.map((i) => ({
+        ...i,
+        stockValue: i.price * i.stock,
+        statusLabel: getStockStatus(i),
+        gstPercentLabel: i.gstPercent != null ? `${i.gstPercent}%` : '—',
+      })),
     [filteredItems]
   )
   const movementExportRows = useMemo(
@@ -194,12 +202,12 @@ export default function AuditorInventoryReport() {
           />
         </div>
 
-        <Table columns={['Product', 'Category', 'Stock', 'Price', 'Stock Value', 'Expiry', 'Supplier', 'Status']}>
+        <Table columns={['Product', 'Category', 'HSN/SAC', 'GST %', 'Stock', 'Price', 'Stock Value', 'Expiry', 'Supplier', 'Status']}>
           {loading && (
-            <tr><td colSpan={8} className="py-10 text-center text-sm text-gray-400">Loading inventory…</td></tr>
+            <tr><td colSpan={10} className="py-10 text-center text-sm text-gray-400">Loading inventory…</td></tr>
           )}
           {!loading && stockPageItems.length === 0 && (
-            <tr><td colSpan={8} className="py-10 text-center text-sm text-gray-400">No items match the current filters.</td></tr>
+            <tr><td colSpan={10} className="py-10 text-center text-sm text-gray-400">No items match the current filters.</td></tr>
           )}
           {stockPageItems.map((item) => {
             const status = getStockStatus(item)
@@ -210,6 +218,8 @@ export default function AuditorInventoryReport() {
                   <p className="text-xs text-gray-400">{item.id}</p>
                 </td>
                 <td className="py-3 px-3 text-gray-600">{item.category}</td>
+                <td className="py-3 px-3 text-gray-600">{item.hsnSacCode || '—'}</td>
+                <td className="py-3 px-3 text-gray-600">{item.gstPercent != null ? `${item.gstPercent}%` : '—'}</td>
                 <td className="py-3 px-3 text-gray-700">{item.stock}</td>
                 <td className="py-3 px-3 text-gray-600">{money(item.price)}</td>
                 <td className="py-3 px-3 font-medium text-gray-700">{money(item.price * item.stock)}</td>

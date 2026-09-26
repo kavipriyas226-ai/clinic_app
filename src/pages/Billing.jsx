@@ -14,12 +14,30 @@ import { createInvoice, getInvoicesByPatient } from '../api/invoices.js'
 import { getPrescriptionsByPatient } from '../api/prescriptions.js'
 import logo from '../assets/logo.png'
 
-const GST_RATE = 0.18
+// Matches the backend's fallback for a product that hasn't been given its own GST% in
+// Product Master yet, so the on-screen preview always agrees with what gets saved.
+const DEFAULT_GST_PERCENT = 18
+
+/** A product priced GST-INCLUSIVE lists a total, not a taxable amount — this backs out the
+ * taxable portion so `amount` always means the same thing regardless of the product's
+ * Price Is setting (matches the same math the backend snapshots per line at save time). */
+function computeTaxableAmount(price, qty, gstPercent, priceType) {
+  const rate = Number(price) || 0
+  const quantity = Number(qty) || 0
+  if (priceType === 'INCLUSIVE') {
+    const pct = Number(gstPercent ?? DEFAULT_GST_PERCENT) || 0
+    return (rate / (1 + pct / 100)) * quantity
+  }
+  return rate * quantity
+}
 
 function buildLineItemsFromBill(billItems, inventory) {
   return billItems.map((b) => {
     const med = inventory.find((m) => m.id === b.id)
     const price = med ? med.price : 0
+    const gstPercent = med?.gstPercent ?? DEFAULT_GST_PERCENT
+    const hsnSacCode = med?.hsnSacCode || null
+    const priceType = med?.priceType || 'TAXABLE'
     return {
       uid: crypto.randomUUID(),
       id: b.id,
@@ -27,7 +45,10 @@ function buildLineItemsFromBill(billItems, inventory) {
       name: b.name,
       price,
       qty: b.qty,
-      amount: price * b.qty,
+      gstPercent,
+      hsnSacCode,
+      priceType,
+      amount: computeTaxableAmount(price, b.qty, gstPercent, priceType),
     }
   })
 }
@@ -93,7 +114,7 @@ function InvoiceHeader({ clinicProfile, logoSrc, savedInvoice, printedAt }) {
   )
 }
 
-function BilledToPatient({ selectedPatient }) {
+function BilledToPatient({ selectedPatient, partyAddress, partyGstin, partyState }) {
   return (
     <div className="mt-3 flex bg-primary-50 border border-primary-100 rounded-lg overflow-hidden">
       <div className="flex-1 min-w-0 p-2.5">
@@ -109,11 +130,11 @@ function BilledToPatient({ selectedPatient }) {
       <div className="flex-1 min-w-0 p-2.5">
         <p className="flex items-center gap-1.5 font-bold text-primary-800 text-[8px] uppercase tracking-wide mb-1">
           <span className="w-4 h-4 rounded-full bg-primary-700 text-white flex items-center justify-center shrink-0"><User size={9} /></span>
-          Patient Details
+          Party Details
         </p>
-        <p className="text-primary-700">Name : <span className="font-semibold text-primary-900">{selectedPatient?.name}</span></p>
-        <p className="text-primary-700">Patient ID : {selectedPatient?.id}</p>
-        <p className="text-primary-700">Mobile : {selectedPatient?.phone || '—'}</p>
+        {partyAddress && <p className="text-primary-700">Address : {partyAddress}</p>}
+        {partyState && <p className="text-primary-700">State : {partyState}</p>}
+        <p className="text-primary-700">GST No. : {partyGstin || '—'}</p>
       </div>
     </div>
   )
@@ -124,11 +145,14 @@ function ItemsTable({ rows, theadRef, getRowRef }) {
     <table className="w-full border-collapse table-fixed mt-3 rounded-lg overflow-hidden">
       <thead ref={theadRef}>
         <tr className="bg-primary-700 text-white text-left text-[8px] font-semibold uppercase tracking-wide">
-          <th className="py-1.5 pl-2 pr-1 w-7">#</th>
+          <th className="py-1.5 pl-2 pr-1 w-6">#</th>
           <th className="py-1.5 pr-1">Item / Treatment</th>
-          <th className="py-1.5 pr-1 text-right w-8">Qty</th>
-          <th className="py-1.5 pr-1 text-right w-14">Price</th>
-          <th className="py-1.5 pr-2 text-right w-16">Amount</th>
+          <th className="py-1.5 pr-1 w-12">HSN/SAC</th>
+          <th className="py-1.5 pr-1 text-right w-6">Qty</th>
+          <th className="py-1.5 pr-1 text-right w-12">Rate</th>
+          <th className="py-1.5 pr-1 text-right w-14">Taxable</th>
+          <th className="py-1.5 pr-1 text-right w-10">GST%</th>
+          <th className="py-1.5 pr-2 text-right w-14">Total</th>
         </tr>
       </thead>
       <tbody>
@@ -136,9 +160,12 @@ function ItemsTable({ rows, theadRef, getRowRef }) {
           <tr key={idx} ref={getRowRef ? (el) => getRowRef(idx, el) : undefined} className="border-b border-primary-100">
             <td className="py-1 pl-2 pr-1 text-primary-500 align-top">{idx + 1}</td>
             <td className="py-1 pr-1 text-primary-900 font-medium align-top break-words">{item.name}</td>
+            <td className="py-1 pr-1 text-primary-600 align-top">{item.hsnSacCode || '—'}</td>
             <td className="py-1 pr-1 text-right text-primary-700 align-top">{item.qty}</td>
             <td className="py-1 pr-1 text-right text-primary-700 align-top">₹{Number(item.price || 0).toLocaleString('en-IN')}</td>
-            <td className="py-1 pr-2 text-right font-semibold text-primary-900 align-top">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</td>
+            <td className="py-1 pr-1 text-right text-primary-700 align-top">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</td>
+            <td className="py-1 pr-1 text-right text-primary-700 align-top">{item.gstPercent ?? '—'}%</td>
+            <td className="py-1 pr-2 text-right font-semibold text-primary-900 align-top">₹{(Number(item.totalAmount ?? item.amount) || 0).toLocaleString('en-IN')}</td>
           </tr>
         ))}
       </tbody>
@@ -167,11 +194,11 @@ function TotalsBlock({ subtotal, discount, discountAmount, gstEnabled, cgstAmoun
           {gstEnabled ? (
             <>
               <div className="flex justify-between">
-                <span>CGST @ 9%</span>
+                <span>CGST</span>
                 <span>₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
               <div className="flex justify-between">
-                <span>SGST @ 9%</span>
+                <span>SGST</span>
                 <span>₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
             </>
@@ -282,7 +309,7 @@ function PageNumberFooter({ pageNum, pageCount }) {
   )
 }
 
-function InvoicePage({ pageNum, pageCount, isFirst, isLastPage, rows, sections, clinicProfile, logoSrc, savedInvoice, printedAt, selectedPatient, closingProps }) {
+function InvoicePage({ pageNum, pageCount, isFirst, isLastPage, rows, sections, clinicProfile, logoSrc, savedInvoice, printedAt, selectedPatient, partyAddress, partyGstin, partyState, closingProps }) {
   return (
     <div
       className={`a5-invoice relative overflow-hidden p-[6mm] box-border print:text-primary-900 text-[10px] leading-snug${!isLastPage ? ' a5-page-break' : ''}`}
@@ -293,7 +320,7 @@ function InvoicePage({ pageNum, pageCount, isFirst, isLastPage, rows, sections, 
       </svg>
 
       <InvoiceHeader clinicProfile={clinicProfile} logoSrc={logoSrc} savedInvoice={savedInvoice} printedAt={printedAt} />
-      {isFirst && <BilledToPatient selectedPatient={selectedPatient} />}
+      {isFirst && <BilledToPatient selectedPatient={selectedPatient} partyAddress={partyAddress} partyGstin={partyGstin} partyState={partyState} />}
       {rows.length > 0 && <ItemsTable rows={rows} />}
       {sections.includes('totals') && <TotalsBlock {...closingProps} />}
       {sections.includes('payment') && <PaymentDetailsBlock paymentDetails={closingProps.paymentDetails} />}
@@ -329,6 +356,9 @@ export default function Billing() {
   const [patientId, setPatientId] = useState(incomingPatientId || '')
   const [patientSearchQuery, setPatientSearchQuery] = useState('')
   const [patientSearchOpen, setPatientSearchOpen] = useState(false)
+  const [partyAddress, setPartyAddress] = useState('')
+  const [partyGstin, setPartyGstin] = useState('')
+  const [partyState, setPartyState] = useState('')
   const [lineItems, setLineItems] = useState([])
   const [discountEnabled, setDiscountEnabled] = useState(false)
   const [discount, setDiscount] = useState(0)
@@ -350,13 +380,17 @@ export default function Billing() {
         setPatients(p)
         setTreatmentOptions(t)
         setInventory(inv)
-        setMedicineOptions(inv.map(({ id, name, price }) => ({ id, name, price })))
+        setMedicineOptions(inv.map(({ id, name, price, gstPercent, hsnSacCode, priceType }) => ({ id, name, price, gstPercent, hsnSacCode, priceType })))
         setClinicProfile(profile)
 
         if (incomingBillItems && incomingBillItems.length > 0) {
           setLineItems(buildLineItemsFromBill(incomingBillItems, inv))
         } else if (t.length > 0) {
-          setLineItems([{ id: t[0].id, type: 'Treatment', name: t[0].name, price: t[0].price, qty: 1, amount: t[0].price }])
+          setLineItems([{
+            id: t[0].id, type: 'Treatment', name: t[0].name, price: t[0].price, qty: 1,
+            gstPercent: DEFAULT_GST_PERCENT, hsnSacCode: null, priceType: 'TAXABLE',
+            amount: t[0].price,
+          }])
         }
 
         if (!incomingPatientId && p.length > 0) {
@@ -419,6 +453,7 @@ export default function Billing() {
 
   function selectPatient(p) {
     setPatientId(p.id)
+    setPartyAddress(p.address || '')
     closePatientSearch()
   }
 
@@ -426,9 +461,16 @@ export default function Billing() {
     const options = kind === 'Treatment' ? treatmentOptions : medicineOptions
     const first = options[0]
     if (!first) return
+    const gstPercent = kind === 'Medicine' ? (first.gstPercent ?? DEFAULT_GST_PERCENT) : DEFAULT_GST_PERCENT
+    const hsnSacCode = kind === 'Medicine' ? (first.hsnSacCode || null) : null
+    const priceType = kind === 'Medicine' ? (first.priceType || 'TAXABLE') : 'TAXABLE'
     setLineItems((prev) => [
       ...prev,
-      { uid: crypto.randomUUID(), id: first.id, type: kind, name: first.name, price: first.price, qty: 1, amount: first.price },
+      {
+        uid: crypto.randomUUID(), id: first.id, type: kind, name: first.name, price: first.price, qty: 1,
+        gstPercent, hsnSacCode, priceType,
+        amount: computeTaxableAmount(first.price, 1, gstPercent, priceType),
+      },
     ])
   }
 
@@ -437,7 +479,9 @@ export default function Billing() {
   }
 
   function updateQty(idx, qty) {
-    setLineItems((prev) => prev.map((item, i) => (i === idx ? { ...item, qty, amount: item.price * qty } : item)))
+    setLineItems((prev) => prev.map((item, i) => (
+      i === idx ? { ...item, qty, amount: computeTaxableAmount(item.price, qty, item.gstPercent, item.priceType) } : item
+    )))
   }
 
   function removeItem(idx) {
@@ -453,7 +497,15 @@ export default function Billing() {
   }
 
   function selectSearchedItem(idx, option) {
-    updateItem(idx, { id: option.id, name: option.name, price: option.price, amount: option.price * lineItems[idx].qty })
+    const item = lineItems[idx]
+    const gstPercent = item.type === 'Medicine' ? (option.gstPercent ?? DEFAULT_GST_PERCENT) : DEFAULT_GST_PERCENT
+    const hsnSacCode = item.type === 'Medicine' ? (option.hsnSacCode || null) : null
+    const priceType = item.type === 'Medicine' ? (option.priceType || 'TAXABLE') : 'TAXABLE'
+    updateItem(idx, {
+      id: option.id, name: option.name, price: option.price,
+      gstPercent, hsnSacCode, priceType,
+      amount: computeTaxableAmount(option.price, item.qty, gstPercent, priceType),
+    })
     closeItemSearch()
   }
 
@@ -463,7 +515,27 @@ export default function Billing() {
   )
   const discountAmount = discountEnabled ? (subtotal * discount) / 100 : 0
   const taxable = subtotal - discountAmount
-  const gstAmount = gstEnabled ? taxable * GST_RATE : 0
+  // Each line is taxed at its own product's GST% rather than one flat rate — the discount is
+  // spread proportionally across lines first, matching exactly what the backend computes and
+  // persists at save time.
+  const discountRatio = subtotal > 0 ? taxable / subtotal : 1
+
+  // Per-line GST/total, for the on-screen preview and the printed invoice — mirrors the
+  // backend's own per-line calculation so what's shown here always matches what gets saved.
+  const enrichedLineItems = useMemo(
+    () =>
+      lineItems.map((item) => {
+        const lineTaxable = (Number(item.amount) || 0) * discountRatio
+        const pct = Number(item.gstPercent ?? DEFAULT_GST_PERCENT) || 0
+        const lineGstAmount = gstEnabled ? (lineTaxable * pct) / 100 : 0
+        return { ...item, gstAmount: lineGstAmount, totalAmount: lineTaxable + lineGstAmount }
+      }),
+    [lineItems, gstEnabled, discountRatio]
+  )
+  const gstAmount = useMemo(
+    () => enrichedLineItems.reduce((sum, item) => sum + item.gstAmount, 0),
+    [enrichedLineItems]
+  )
   const cgstAmount = gstAmount / 2
   const sgstAmount = gstAmount / 2
   const total = taxable + gstAmount
@@ -511,7 +583,7 @@ export default function Billing() {
   // off-screen probe and lay out the page breaks ourselves, then render one explicit
   // .a5-invoice div per physical page.
   const logoSrc = clinicProfile?.logoDataUrl || logo
-  const rowsWithIdx = useMemo(() => lineItems.map((item, idx) => ({ item, idx })), [lineItems])
+  const rowsWithIdx = useMemo(() => enrichedLineItems.map((item, idx) => ({ item, idx })), [enrichedLineItems])
   const closingProps = { subtotal, discount, discountAmount, gstEnabled, cgstAmount, sgstAmount, total, paymentDetails, patientPrescription, clinicProfile }
 
   const probeHeaderRef = useRef(null)
@@ -617,7 +689,7 @@ export default function Billing() {
     setInvoicePages(
       pages.map((p, i) => ({ rows: p.rows, sections: p.sections, isFirst: i === 0, isLastPage: i === pages.length - 1 }))
     )
-  }, [rowsWithIdx, selectedPatient, clinicProfile, patientPrescription, savedInvoice, printedAt, subtotal, discount, discountAmount, gstEnabled, cgstAmount, sgstAmount, total, paymentDetails, fontsReady])
+  }, [rowsWithIdx, selectedPatient, partyAddress, partyGstin, partyState, clinicProfile, patientPrescription, savedInvoice, printedAt, subtotal, discount, discountAmount, gstEnabled, cgstAmount, sgstAmount, total, paymentDetails, fontsReady])
 
   function validateForm() {
     if (!patientId || lineItems.length === 0) {
@@ -656,6 +728,9 @@ export default function Billing() {
     try {
       const invoice = await createInvoice({
         patientId,
+        partyAddress: partyAddress || null,
+        partyGstin: partyGstin || null,
+        partyState: partyState || null,
         lineItems: lineItems.map((item) => ({
           refId: item.id,
           type: item.type,
@@ -693,9 +768,16 @@ export default function Billing() {
     }
     setLineItems(
       treatmentOptions.length > 0
-        ? [{ id: treatmentOptions[0].id, type: 'Treatment', name: treatmentOptions[0].name, price: treatmentOptions[0].price, qty: 1, amount: treatmentOptions[0].price }]
+        ? [{
+            id: treatmentOptions[0].id, type: 'Treatment', name: treatmentOptions[0].name, price: treatmentOptions[0].price, qty: 1,
+            gstPercent: DEFAULT_GST_PERCENT, hsnSacCode: null, priceType: 'TAXABLE',
+            amount: treatmentOptions[0].price,
+          }]
         : []
     )
+    setPartyAddress(patients[0]?.address || '')
+    setPartyGstin('')
+    setPartyState('')
     setDiscountEnabled(false)
     setDiscount(0)
     setGstEnabled(true)
@@ -789,6 +871,33 @@ export default function Billing() {
                   {selectedPatient ? `${selectedPatient.name} — ${selectedPatient.id}` : 'Search and select a patient...'}
                 </button>
               )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <FormField label="Address / Place">
+                <TextInput
+                  value={partyAddress}
+                  disabled={formLocked}
+                  onChange={(e) => setPartyAddress(e.target.value)}
+                  placeholder="Billing address"
+                />
+              </FormField>
+              <FormField label="State">
+                <TextInput
+                  value={partyState}
+                  disabled={formLocked}
+                  onChange={(e) => setPartyState(e.target.value)}
+                  placeholder="e.g. Tamil Nadu"
+                />
+              </FormField>
+              <FormField label="GST No." hint="Optional — only if the party is GST-registered">
+                <TextInput
+                  value={partyGstin}
+                  disabled={formLocked}
+                  onChange={(e) => setPartyGstin(e.target.value)}
+                  placeholder="e.g. 33ABCDE1234F1Z5"
+                />
+              </FormField>
             </div>
           </Card>
 
@@ -950,7 +1059,7 @@ export default function Billing() {
               <div>
                 <h3 className="font-bold text-gray-800">GST</h3>
                 <p className="text-xs text-gray-400 mt-1">
-                  {gstEnabled ? 'CGST 9% + SGST 9% applied to the taxable amount' : 'GST is not applied to this invoice'}
+                  {gstEnabled ? 'CGST + SGST applied per item, using each product’s own GST rate' : 'GST is not applied to this invoice'}
                 </p>
               </div>
               <button
@@ -973,11 +1082,11 @@ export default function Billing() {
             {gstEnabled && (
               <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5 text-sm">
                 <div className="flex justify-between text-gray-600">
-                  <span>CGST @ 9%</span>
+                  <span>CGST</span>
                   <span className="font-medium text-gray-800">₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
-                  <span>SGST @ 9%</span>
+                  <span>SGST</span>
                   <span className="font-medium text-gray-800">₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
@@ -1040,9 +1149,12 @@ export default function Billing() {
           </div>
 
           <div className="space-y-2 text-sm mb-4 pb-4 border-b border-gray-100">
-            {lineItems.map((item, idx) => (
+            {enrichedLineItems.map((item, idx) => (
               <div key={idx} className="flex justify-between text-gray-600">
-                <span className="truncate pr-2">{item.name} x{item.qty}</span>
+                <span className="truncate pr-2">
+                  {item.name} x{item.qty}
+                  <span className="text-xs text-gray-400"> · {item.hsnSacCode || 'No HSN/SAC'} · GST {item.gstPercent ?? 0}%</span>
+                </span>
                 <span className="shrink-0">₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</span>
               </div>
             ))}
@@ -1060,11 +1172,11 @@ export default function Billing() {
             {gstEnabled ? (
               <>
                 <div className="flex justify-between text-gray-600">
-                  <span>CGST (9%)</span>
+                  <span>CGST</span>
                   <span>+ ₹{cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
-                  <span>SGST (9%)</span>
+                  <span>SGST</span>
                   <span>+ ₹{sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                 </div>
               </>
@@ -1188,6 +1300,9 @@ export default function Billing() {
               savedInvoice={savedInvoice}
               printedAt={printedAt}
               selectedPatient={selectedPatient}
+              partyAddress={partyAddress}
+              partyGstin={partyGstin}
+              partyState={partyState}
               closingProps={closingProps}
             />
           ))}
@@ -1207,7 +1322,7 @@ export default function Billing() {
               <InvoiceHeader clinicProfile={clinicProfile} logoSrc={logoSrc} savedInvoice={savedInvoice} printedAt={printedAt} />
             </div>
             <div ref={probeBilledToRef} className="overflow-hidden">
-              <BilledToPatient selectedPatient={selectedPatient} />
+              <BilledToPatient selectedPatient={selectedPatient} partyAddress={partyAddress} partyGstin={partyGstin} partyState={partyState} />
             </div>
             <ItemsTable
               rows={rowsWithIdx}

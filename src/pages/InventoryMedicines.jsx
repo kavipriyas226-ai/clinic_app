@@ -88,6 +88,9 @@ export default function InventoryMedicines() {
       expiry: form.get('expiry'),
       supplier: form.get('supplier'),
       barcode: form.get('barcode') || null,
+      gstPercent: form.get('gstPercent') === '' ? null : Number(form.get('gstPercent')),
+      hsnSacCode: form.get('hsnSacCode') || null,
+      priceType: form.get('priceType'),
     }
     const created = await createInventoryItem(payload)
     setInventory((prev) => [created, ...prev])
@@ -107,6 +110,9 @@ export default function InventoryMedicines() {
       expiry: form.get('expiry'),
       supplier: form.get('supplier'),
       barcode: form.get('barcode') || null,
+      gstPercent: form.get('gstPercent') === '' ? null : Number(form.get('gstPercent')),
+      hsnSacCode: form.get('hsnSacCode') || null,
+      priceType: form.get('priceType'),
     }
     const updated = await updateInventoryItem(editTarget.id, payload)
     setInventory((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
@@ -251,6 +257,20 @@ export default function InventoryMedicines() {
           <FormField label="Supplier" required>
             <TextInput name="supplier" required placeholder="e.g. One Clinical Skincare Distributors" />
           </FormField>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="GST %" hint="Blank = use the clinic default">
+              <TextInput name="gstPercent" type="number" min="0" max="100" step="0.01" placeholder="e.g. 18" />
+            </FormField>
+            <FormField label="HSN/SAC Code">
+              <TextInput name="hsnSacCode" placeholder="e.g. 3004" />
+            </FormField>
+          </div>
+          <FormField label="Price Is" hint="Whether the Price above already includes GST">
+            <Select name="priceType" defaultValue="TAXABLE">
+              <option value="TAXABLE">Taxable (GST added on top)</option>
+              <option value="INCLUSIVE">Total (GST already included)</option>
+            </Select>
+          </FormField>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => { setShowAdd(false); setAddBarcodePrefill('') }}>Cancel</Button>
             <Button type="submit">Add Medicine</Button>
@@ -284,6 +304,9 @@ export default function InventoryMedicines() {
             <DetailRow label="Stock" value={`${viewTarget.stock} units (threshold ${viewTarget.threshold})`} />
             <DetailRow label="Expiry Date" value={viewTarget.expiry} />
             <DetailRow label="Supplier" value={viewTarget.supplier} />
+            <DetailRow label="GST %" value={viewTarget.gstPercent != null ? `${viewTarget.gstPercent}%` : '—'} />
+            <DetailRow label="HSN/SAC Code" value={viewTarget.hsnSacCode || '—'} />
+            <DetailRow label="Price Is" value={viewTarget.priceType === 'INCLUSIVE' ? 'Total (GST included)' : 'Taxable (GST added on top)'} />
             <DetailRow label="Status" value={getStockStatus(viewTarget)} />
           </div>
         )}
@@ -326,6 +349,20 @@ export default function InventoryMedicines() {
             </div>
             <FormField label="Supplier" required>
               <TextInput name="supplier" required defaultValue={editTarget.supplier} />
+            </FormField>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="GST %" hint="Blank = use the clinic default">
+                <TextInput name="gstPercent" type="number" min="0" max="100" step="0.01" defaultValue={editTarget.gstPercent ?? ''} placeholder="e.g. 18" />
+              </FormField>
+              <FormField label="HSN/SAC Code">
+                <TextInput name="hsnSacCode" defaultValue={editTarget.hsnSacCode || ''} placeholder="e.g. 3004" />
+              </FormField>
+            </div>
+            <FormField label="Price Is" hint="Whether Price already includes GST">
+              <Select name="priceType" defaultValue={editTarget.priceType || 'TAXABLE'}>
+                <option value="TAXABLE">Taxable (GST added on top)</option>
+                <option value="INCLUSIVE">Total (GST already included)</option>
+              </Select>
             </FormField>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
