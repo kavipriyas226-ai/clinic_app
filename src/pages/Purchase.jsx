@@ -246,11 +246,11 @@ export default function Purchase() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 mb-1">Rate</p>
-                        <TextInput type="number" min="0" value={item.rate} onChange={(e) => updateLineRate(idx, Number(e.target.value) || 0)} />
+                        <TextInput type="number" min="0" step="0.01" value={item.rate} onChange={(e) => updateLineRate(idx, Number(e.target.value) || 0)} />
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 mb-1">Taxable Amt</p>
-                        <TextInput type="number" min="0" value={item.taxableAmount} onChange={(e) => updateLineTaxable(idx, Number(e.target.value) || 0)} />
+                        <TextInput type="number" min="0" step="0.01" value={item.taxableAmount} onChange={(e) => updateLineTaxable(idx, Number(e.target.value) || 0)} />
                       </div>
                     </div>
                     <div className="flex justify-end gap-4 text-xs text-gray-500 pt-1">

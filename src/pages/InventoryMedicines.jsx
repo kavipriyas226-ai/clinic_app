@@ -242,7 +242,7 @@ export default function InventoryMedicines() {
               </Select>
             </FormField>
             <FormField label="Price (₹)" required>
-              <TextInput name="price" type="number" min="0" required placeholder="0" />
+              <TextInput name="price" type="number" min="0" step="0.01" required placeholder="0" />
             </FormField>
             <FormField label="Stock Quantity" required>
               <TextInput name="stock" type="number" min="0" required placeholder="0" />
@@ -335,7 +335,7 @@ export default function InventoryMedicines() {
                 </Select>
               </FormField>
               <FormField label="Price (₹)" required>
-                <TextInput name="price" type="number" min="0" required defaultValue={editTarget.price} />
+                <TextInput name="price" type="number" min="0" step="0.01" required defaultValue={editTarget.price} />
               </FormField>
               <FormField label="Stock Quantity" required>
                 <TextInput name="stock" type="number" min="0" required defaultValue={editTarget.stock} />

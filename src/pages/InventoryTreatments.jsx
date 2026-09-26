@@ -161,7 +161,7 @@ export default function InventoryTreatments() {
             </Select>
           </FormField>
           <FormField label="Price (₹)" required>
-            <TextInput name="price" type="number" min="0" required placeholder="0" />
+            <TextInput name="price" type="number" min="0" step="0.01" required placeholder="0" />
           </FormField>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setShowAddTreatment(false)}>Cancel</Button>
@@ -201,7 +201,7 @@ export default function InventoryTreatments() {
               </Select>
             </FormField>
             <FormField label="Price (₹)" required>
-              <TextInput name="price" type="number" min="0" required defaultValue={treatmentEditTarget.price} />
+              <TextInput name="price" type="number" min="0" step="0.01" required defaultValue={treatmentEditTarget.price} />
             </FormField>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setTreatmentEditTarget(null)}>Cancel</Button>

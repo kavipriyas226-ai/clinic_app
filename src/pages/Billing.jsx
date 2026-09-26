@@ -987,6 +987,7 @@ export default function Billing() {
                       <input
                         type="number"
                         min="0"
+                        step="0.01"
                         value={item.amount}
                         disabled={formLocked}
                         onChange={(e) => updateItem(idx, { amount: e.target.value === '' ? '' : Number(e.target.value) })}
@@ -1046,6 +1047,7 @@ export default function Billing() {
                 type="number"
                 min="0"
                 max="100"
+                step="0.01"
                 disabled={!discountEnabled || formLocked}
                 value={discount}
                 onChange={(e) => setDiscount(Number(e.target.value) || 0)}
@@ -1111,6 +1113,7 @@ export default function Billing() {
                   type="number"
                   min="0"
                   max={total}
+                  step="0.01"
                   disabled={formLocked}
                   value={initialPaymentAmount}
                   onChange={(e) => {
